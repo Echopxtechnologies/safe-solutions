@@ -20,16 +20,23 @@
                                     <label for="category_id" class="control-label">
                                         <span class="text-danger">*</span> Category
                                     </label>
-                                    <select name="category_id" id="category_id" class="form-control selectpicker" 
-                                            data-live-search="true" required>
-                                        <option value="">Select Category</option>
-                                        <?php foreach ($categories as $cat): ?>
-                                            <option value="<?php echo $cat->id; ?>" 
-                                                    <?php echo (isset($branch) && $branch->category_id == $cat->id) ? 'selected' : ''; ?>>
-                                                <?php echo htmlspecialchars($cat->name); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                    <div class="input-group">
+                                        <select name="category_id" id="category_id" class="form-control selectpicker" 
+                                                data-live-search="true" required>
+                                            <option value="">Select Category</option>
+                                            <?php foreach ($categories as $cat): ?>
+                                                <option value="<?php echo $cat->id; ?>" 
+                                                        <?php echo (isset($branch) && $branch->category_id == $cat->id) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($cat->name); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <div class="input-group-btn">
+                                            <button type="button" class="btn btn-success" data-toggle="modal" data-target="#categoryModal">
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -146,8 +153,38 @@
     </div>
 </div>
 
-<?php init_tail(); ?>
 
+
+<!-- Category Creation Modal -->
+<div class="modal fade" id="categoryModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">Create New Category</h4>
+            </div>
+           <div class="modal-body">
+                <div class="form-group">
+                    <label for="new_category_name" class="control-label">
+                        <span class="text-danger">*</span> Category Name
+                    </label>
+                    <input type="text" class="form-control" id="new_category_name" 
+                        placeholder="Enter category name" required>
+                </div>
+                <div class="alert alert-danger hide" id="category_error"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveCategoryBtn">
+                    <i class="fa fa-save"></i> Save Category
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<?php init_tail(); ?>
 <script>
 (function($) {
     'use strict';
@@ -157,6 +194,63 @@
         if (typeof $.fn.selectpicker !== 'undefined') {
             $('.selectpicker').selectpicker('refresh');
         }
+        
+        // Save Category Button Click
+        $('#saveCategoryBtn').on('click', function() {
+            var btn = $(this);
+            var categoryName = $('#new_category_name').val().trim();
+            var colorCode = $('#new_category_color').val();
+            
+            // Validation
+            if (categoryName === '') {
+                $('#category_error').removeClass('hide').text('Category name is required');
+                return;
+            }
+            
+            // Disable button and show loading
+            btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Saving...');
+            $('#category_error').addClass('hide');
+            
+            // AJAX Request
+           // AJAX Request
+        $.ajax({
+            url: admin_url + 'safelegalsolutions/create_category_ajax',
+            type: 'POST',
+            data: {
+                name: categoryName,
+                <?php echo $this->security->get_csrf_token_name(); ?>: '<?php echo $this->security->get_csrf_hash(); ?>'
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Add new option to dropdown
+                    var newOption = new Option(response.category.name, response.category.id, true, true);
+                    $('#category_id').append(newOption);
+                    $('#category_id').selectpicker('refresh');
+                    
+                    // Close modal and reset form
+                    $('#categoryModal').modal('hide');
+                    $('#new_category_name').val('');
+                    
+                    // Show success message
+                    alert_float('success', 'Category created successfully');
+                } else {
+                    $('#category_error').removeClass('hide').text(response.message || 'Failed to create category');
+                }
+            },
+            error: function() {
+                $('#category_error').removeClass('hide').text('An error occurred. Please try again.');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('<i class="fa fa-save"></i> Save Category');
+            }
+        });
+        
+        // Reset modal when closed
+        $('#categoryModal').on('hidden.bs.modal', function() {
+            $('#new_category_name').val('');
+            $('#category_error').addClass('hide');
+        });
     });
     
 })(jQuery);

@@ -424,8 +424,11 @@ public function branch($id = '')
         }
     }
 
-    $data['categories'] = $this->safelegalsolutions_model->get_all_categories();
-    $data['staff_members'] = $this->staff_model->get('', ['active' => 1]);
+    $all_categories = $this->safelegalsolutions_model->get_all_categories();
+$data['categories'] = array_filter($all_categories, function($cat) {
+    return $cat->name !== 'Safe Legal Solutions';
+});
+    $data['staff_members'] = $this->staff_model->get('', ['active' => 1, 'admin !=' => 1]);
     $data['title'] = $id == '' ? 'Add Branch' : 'Edit Branch';
     
     $this->load->view('branch_form', $data);
@@ -973,4 +976,63 @@ public function branch($id = '')
             'total_price' => number_format($total_price, 2, '.', '')
         ]);
     }
+
+
+// branch creation
+/**
+ * AJAX: Create new category
+ */
+public function create_category_ajax()
+{
+    if (!is_sls_manager_or_admin()) {
+        echo json_encode(['success' => false, 'message' => 'Access denied']);
+        return;
+    }
+    
+    if ($this->input->post()) {
+        $name = trim($this->input->post('name'));
+        
+        // Validation
+        if (empty($name)) {
+            echo json_encode(['success' => false, 'message' => 'Category name is required']);
+            return;
+        }
+        
+        // Check if category already exists
+        $this->db->where('name', $name);
+        $existing = $this->db->get(db_prefix() . 'sls_branch_categories')->row();
+        
+        if ($existing) {
+            echo json_encode(['success' => false, 'message' => 'Category already exists']);
+            return;
+        }
+        
+        // Insert category
+        $data = [
+            'name' => $name,
+            'is_active' => 1,
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $this->db->insert(db_prefix() . 'sls_branch_categories', $data);
+        $insert_id = $this->db->insert_id();
+        
+        if ($insert_id) {
+            log_activity('New Category Created via AJAX [ID: ' . $insert_id . ', Name: ' . $name . ']');
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Category created successfully',
+                'category' => [
+                    'id' => $insert_id,
+                    'name' => $name
+                ]
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to create category']);
+        }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid request']);
+    }
+}
 }
