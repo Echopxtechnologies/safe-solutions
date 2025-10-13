@@ -10,6 +10,17 @@ Author: Your Name
 */
 
 define('SAFELEGALSOLUTIONS_MODULE_NAME', 'safelegalsolutions');
+hooks()->add_action('admin_init', 'safelegalsolutions_init_module');
+
+function safelegalsolutions_init_module()
+{
+    $CI = &get_instance();
+    
+    // Load helper
+    $CI->load->helper(SAFELEGALSOLUTIONS_MODULE_NAME . '/safelegalsolutions');
+    
+    // Rest of initialization...
+}
 
 register_activation_hook(SAFELEGALSOLUTIONS_MODULE_NAME, 'safelegalsolutions_activation_hook');
 register_deactivation_hook(SAFELEGALSOLUTIONS_MODULE_NAME, 'safelegalsolutions_deactivation_hook');
@@ -320,28 +331,29 @@ function safelegalsolutions_init_menu_items()
     $CI = &get_instance();
 
     // Register MANAGER capabilities (full access like admin)
+    // Register MANAGER capabilities (full access like admin)
     $manager_capabilities = [
         'capabilities' => [
-            'manage' => _l('permission_manage') . ' (Full SLS Access)',
+            'manage' => _l('permission_manage') . ' (Full SLS Access)',  // ❌ THIS LINE
         ],
     ];
     
     // Register candidate capabilities (for NPM)
     $npm_capabilities = [
         'capabilities' => [
-            'view'   => _l('permission_view'),
-            'create' => _l('permission_create'),
-            'edit'   => _l('permission_edit'),
+            'view'   => _l('permission_view'),    // ❌ THIS LINE
+            'create' => _l('permission_create'),  // ❌ THIS LINE
+            'edit'   => _l('permission_edit'),    // ❌ THIS LINE
         ],
     ];
     
     // Register branch capabilities (for Admin/Manager only)
     $admin_capabilities = [
         'capabilities' => [
-            'view'   => _l('permission_view'),
-            'create' => _l('permission_create'),
-            'edit'   => _l('permission_edit'),
-            'delete' => _l('permission_delete'),
+            'view'   => _l('permission_view'),    // ❌ THIS LINE
+            'create' => _l('permission_create'),  // ❌ THIS LINE
+            'edit'   => _l('permission_edit'),    // ❌ THIS LINE
+            'delete' => _l('permission_delete'),  // ❌ THIS LINE
         ],
     ];
 

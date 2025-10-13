@@ -280,9 +280,22 @@ class Safelegalsolutions extends AdminController
         $this->app->get_table_data(module_views_path('safelegalsolutions', 'tables/branches_table'));
     }
 
-    /**
-     * Add or Edit Branch (with Staff Creation)
-     */
+ /**
+ * Add or Edit Branch (with Automatic Staff Creation & Role Assignment)
+ * 
+ * WORKFLOW:
+ * 1. Check if creating new staff (create_new_staff checkbox)
+ * 2. Validate staff email doesn't exist
+ * 3. Create staff account with generated password
+ * 4. Assign to "SLS Nodal Partner Manager" role (auto-created if not exists)
+ * 5. Set specific permissions for SafeLegalSolutions module only
+ * 6. Send welcome email with credentials
+ * 7. Create/Update branch with the new staff as manager
+ */
+/**
+ * Add or Edit Branch (with Automatic Staff Creation & Role Assignment)
+ * FIXED VERSION with better error handling
+ */
 public function branch($id = '')
 {
     if (!is_sls_manager_or_admin()) {
@@ -292,60 +305,160 @@ public function branch($id = '')
     if ($this->input->post()) {
         $post_data = $this->input->post();
         
-        // DEBUG: Log what we received
-        log_activity('DEBUG - POST Data: ' . json_encode($post_data));
-        
-        // STEP 1: Handle Staff Creation
+        // ============================================================
+        // STEP 1: HANDLE STAFF CREATION (if enabled)
+        // ============================================================
         if (isset($post_data['create_new_staff']) && $post_data['create_new_staff'] == '1') {
             
-            $this->db->where('email', $post_data['staff_email']);
-            $existing = $this->db->get(db_prefix() . 'staff')->row();
-            
-            if ($existing) {
-                set_alert('danger', 'Email already exists');
+            // Validate staff email
+            if (empty($post_data['staff_email'])) {
+                set_alert('danger', 'Staff email is required when creating new staff');
                 redirect(admin_url('safelegalsolutions/branch'));
                 return;
             }
             
+            // Check if email already exists - FIXED QUERY
+            try {
+                $this->db->select('staffid');
+                $this->db->from(db_prefix() . 'staff');
+                $this->db->where('email', $post_data['staff_email']);
+                $existing_staff = $this->db->get()->row();
+                
+                if ($existing_staff) {
+                    set_alert('danger', 'Email already exists in the system');
+                    redirect(admin_url('safelegalsolutions/branch'));
+                    return;
+                }
+            } catch (Exception $e) {
+                log_activity('Branch Creation Error (Email Check): ' . $e->getMessage());
+                set_alert('danger', 'Database error. Please check logs.');
+                redirect(admin_url('safelegalsolutions/branch'));
+                return;
+            }
+            
+            // Validate required staff fields
+            if (empty($post_data['staff_firstname']) || empty($post_data['staff_lastname'])) {
+                set_alert('danger', 'Staff first name and last name are required');
+                redirect(admin_url('safelegalsolutions/branch'));
+                return;
+            }
+            
+            // Load staff model
             $this->load->model('staff_model');
             
-            $staff_data = [
-                'email' => $post_data['staff_email'],
-                'firstname' => $post_data['staff_firstname'],
-                'lastname' => $post_data['staff_lastname'],
-                'phonenumber' => isset($post_data['staff_phonenumber']) ? $post_data['staff_phonenumber'] : '',
-                'password' => $post_data['staff_password'],
-                'active' => 1,
-                'admin' => 0,
-                'is_not_staff' => 0
-            ];
+            // Get or create SLS Nodal Partner Manager role
+            $role_id = $this->get_or_create_sls_role();
             
-            $new_staff_id = $this->staff_model->add($staff_data);
-            
-            if (!$new_staff_id) {
-                set_alert('danger', 'Failed to create staff');
+            if (!$role_id) {
+                set_alert('danger', 'Failed to create/find SLS role. Please check logs.');
                 redirect(admin_url('safelegalsolutions/branch'));
                 return;
             }
             
-            // Set permissions
-            $this->db->insert(db_prefix() . 'staff_permissions', [
-                'staffid' => $new_staff_id,
-                'feature' => 'safelegalsolutions_students',
-                'capability' => 'view,create,edit'
-            ]);
+            // Generate secure password
+            $password = $this->generate_secure_password(12);
             
-            // IMPORTANT: Clear the nodal_partner_manager_id from form and set new one
-            unset($post_data['nodal_partner_manager_id']);
+            // Prepare staff data
+            $staff_data = [
+                'email'         => $post_data['staff_email'],
+                'firstname'     => $post_data['staff_firstname'],
+                'lastname'      => $post_data['staff_lastname'],
+                'phonenumber'   => isset($post_data['staff_phonenumber']) ? $post_data['staff_phonenumber'] : '',
+                'password'      => $password,
+                'active'        => 1,
+                'admin'         => 0,
+                'role'          => $role_id,
+                'is_not_staff'  => 0,
+                'hourly_rate'   => 0,
+                'default_language' => '',
+                'direction'     => '',
+                'media_path_slug' => ''
+            ];
+            
+            // Create staff account
+            try {
+                $new_staff_id = $this->staff_model->add($staff_data);
+                
+                if (!$new_staff_id) {
+                    set_alert('danger', 'Failed to create staff account. Please check logs and try again.');
+                    redirect(admin_url('safelegalsolutions/branch'));
+                    return;
+                }
+                
+                log_activity('New SLS Partner Staff Created [ID: ' . $new_staff_id . ', Email: ' . $post_data['staff_email'] . ']');
+                
+            } catch (Exception $e) {
+                log_activity('Staff Creation Error: ' . $e->getMessage());
+                set_alert('danger', 'Error creating staff account: ' . $e->getMessage());
+                redirect(admin_url('safelegalsolutions/branch'));
+                return;
+            }
+            
+            // ============================================================
+            // STEP 2: SET SPECIFIC PERMISSIONS (SafeLegalSolutions only)
+            // ============================================================
+            
+            try {
+                // Delete any existing permissions for this staff - FIXED QUERY
+                $this->db->where('staffid', $new_staff_id);
+                $this->db->delete(db_prefix() . 'staff_permissions');
+                
+                // Add SafeLegalSolutions permissions
+                $permissions = [
+                    [
+                        'staffid'    => $new_staff_id,
+                        'feature'    => 'safelegalsolutions_students',
+                        'capability' => 'view'
+                    ],
+                    [
+                        'staffid'    => $new_staff_id,
+                        'feature'    => 'safelegalsolutions_students',
+                        'capability' => 'create'
+                    ],
+                    [
+                        'staffid'    => $new_staff_id,
+                        'feature'    => 'safelegalsolutions_students',
+                        'capability' => 'edit'
+                    ]
+                ];
+                
+                $this->db->insert_batch(db_prefix() . 'staff_permissions', $permissions);
+                
+                log_activity('SLS Permissions Set for Staff ID: ' . $new_staff_id);
+                
+            } catch (Exception $e) {
+                log_activity('Permission Setting Error: ' . $e->getMessage());
+                // Don't fail the whole process, just log the error
+                // The staff account is created, permissions can be set manually
+            }
+            
+            // ============================================================
+            // STEP 3: SEND WELCOME EMAIL WITH CREDENTIALS
+            // ============================================================
+            try {
+                $email_sent = $this->send_staff_credentials_email(
+                    $post_data['staff_email'],
+                    $password,
+                    $post_data['staff_firstname']
+                );
+                
+                log_activity('Staff Credentials Email ' . ($email_sent ? 'Sent' : 'Failed') . ' [Staff ID: ' . $new_staff_id . ']');
+                
+            } catch (Exception $e) {
+                log_activity('Email Send Error: ' . $e->getMessage());
+                // Don't fail, just log - email can be resent manually
+            }
+            
+            // Update POST data to use new staff ID as manager
             $post_data['nodal_partner_manager_id'] = $new_staff_id;
-            
-            // DEBUG
-            log_activity('DEBUG - Staff created with ID: ' . $new_staff_id);
         }
         
-        // STEP 2: Build clean branch data - STRICT WHITELIST
-        $branch_data = [];
+        // ============================================================
+        // STEP 4: VALIDATE & PREPARE BRANCH DATA
+        // ============================================================
         
+        // Whitelist allowed fields
+        $branch_data = [];
         $allowed_fields = [
             'category_id',
             'branch_name',
@@ -364,10 +477,7 @@ public function branch($id = '')
             }
         }
         
-        // DEBUG: Check what's in branch_data
-        log_activity('DEBUG - Branch Data Before Insert: ' . json_encode($branch_data));
-        
-        // STEP 3: Validate required fields
+        // Validate required fields
         if (empty($branch_data['category_id'])) {
             set_alert('danger', 'Category is required');
             redirect(admin_url('safelegalsolutions/branch'));
@@ -381,42 +491,65 @@ public function branch($id = '')
         }
         
         if (empty($branch_data['nodal_partner_manager_id'])) {
-            set_alert('danger', 'Manager is required');
+            set_alert('danger', 'Nodal Partner Manager is required');
             redirect(admin_url('safelegalsolutions/branch'));
             return;
         }
         
-        // STEP 4: Create/Update Branch
-        if ($id == '') {
-            $branch_data['created_by'] = get_staff_user_id();
-            $branch_data['registration_token'] = bin2hex(random_bytes(32));
-            
-            // DEBUG: Final data before model
-            log_activity('DEBUG - Final Branch Data: ' . json_encode($branch_data));
-            
-            $insert_id = $this->safelegalsolutions_model->add_branch($branch_data);
-            
-            if ($insert_id) {
-                set_alert('success', 'Branch created successfully with ID: ' . $insert_id);
-                redirect(admin_url('safelegalsolutions/branches'));
+        // ============================================================
+        // STEP 5: CREATE/UPDATE BRANCH
+        // ============================================================
+        
+        try {
+            if ($id == '') {
+                // CREATE NEW BRANCH
+                $branch_data['created_by'] = get_staff_user_id();
+                $branch_data['registration_token'] = bin2hex(random_bytes(32));
+                
+                $insert_id = $this->safelegalsolutions_model->add_branch($branch_data);
+                
+                if ($insert_id) {
+                    $success_message = 'Branch created successfully';
+                    
+                    // Add staff creation success message if applicable
+                    if (isset($new_staff_id)) {
+                        $success_message .= ' and partner account created for ' . $post_data['staff_firstname'] . ' ' . $post_data['staff_lastname'];
+                        if (isset($email_sent) && $email_sent) {
+                            $success_message .= '. Login credentials sent to ' . $post_data['staff_email'];
+                        } else {
+                            $success_message .= '. Please manually send login credentials.';
+                        }
+                    }
+                    
+                    set_alert('success', $success_message);
+                    redirect(admin_url('safelegalsolutions/branches'));
+                } else {
+                    set_alert('danger', 'Error creating branch. Please check the logs.');
+                    redirect(admin_url('safelegalsolutions/branch'));
+                }
             } else {
-                log_activity('DEBUG - Branch creation FAILED');
-                set_alert('danger', 'Error creating branch - check error log');
-                redirect(admin_url('safelegalsolutions/branch'));
+                // UPDATE EXISTING BRANCH
+                $success = $this->safelegalsolutions_model->update_branch($id, $branch_data);
+                
+                if ($success) {
+                    set_alert('success', 'Branch updated successfully');
+                    redirect(admin_url('safelegalsolutions/branches'));
+                } else {
+                    set_alert('danger', 'Error updating branch');
+                    redirect(admin_url('safelegalsolutions/branch/' . $id));
+                }
             }
-        } else {
-            $success = $this->safelegalsolutions_model->update_branch($id, $branch_data);
-            
-            if ($success) {
-                set_alert('success', 'Branch updated successfully');
-                redirect(admin_url('safelegalsolutions/branches'));
-            } else {
-                set_alert('danger', 'Error updating branch');
-                redirect(admin_url('safelegalsolutions/branch'));
-            }
+        } catch (Exception $e) {
+            log_activity('Branch Creation/Update Error: ' . $e->getMessage());
+            set_alert('danger', 'Database error: ' . $e->getMessage());
+            redirect(admin_url('safelegalsolutions/branch'));
         }
     }
 
+    // ============================================================
+    // LOAD FORM VIEW (GET REQUEST)
+    // ============================================================
+    
     if ($id != '') {
         $data['branch'] = $this->safelegalsolutions_model->get_branch($id);
         if (!$data['branch']) {
@@ -424,118 +557,155 @@ public function branch($id = '')
         }
     }
 
+    // Get categories (exclude "Safe Legal Solutions")
     $all_categories = $this->safelegalsolutions_model->get_all_categories();
-$data['categories'] = array_filter($all_categories, function($cat) {
-    return $cat->name !== 'Safe Legal Solutions';
-});
+    $data['categories'] = array_filter($all_categories, function($cat) {
+        return $cat->name !== 'Safe Legal Solutions';
+    });
+    
     $data['staff_members'] = $this->staff_model->get('', ['active' => 1, 'admin !=' => 1]);
     $data['title'] = $id == '' ? 'Add Branch' : 'Edit Branch';
     
     $this->load->view('branch_form', $data);
 }
-    /**
-     * Get or create SLS Nodal Manager role
-     */
-    private function get_or_create_sls_role()
-    {
-        $role_name = 'SLS Nodal Partner Manager';
-        
+
+/**
+ * Get or Create SLS Nodal Partner Manager Role
+ * FIXED VERSION with better error handling
+ */
+private function get_or_create_sls_role()
+{
+    $role_name = 'SLS Nodal Partner Manager';
+    
+    try {
         // Check if role exists
+        $this->db->select('roleid');
+        $this->db->from(db_prefix() . 'roles');
         $this->db->where('name', $role_name);
-        $role = $this->db->get(db_prefix() . 'roles')->row();
+        $role = $this->db->get()->row();
         
-        if (!$role) {
-            // Create the role
-            $role_data = [
-                'name' => $role_name,
-                'permissions' => serialize([])
-            ];
-            
-            $this->db->insert(db_prefix() . 'roles', $role_data);
-            $role_id = $this->db->insert_id();
-            
+        if ($role) {
+            return $role->roleid;
+        }
+        
+        // Create the role with empty permissions
+        $role_data = [
+            'name' => $role_name,
+            'permissions' => serialize([])
+        ];
+        
+        $this->db->insert(db_prefix() . 'roles', $role_data);
+        $role_id = $this->db->insert_id();
+        
+        if ($role_id) {
+            log_activity('SLS Nodal Partner Manager Role Created [Role ID: ' . $role_id . ']');
             return $role_id;
         }
         
-        return $role->roleid;
+        return false;
+        
+    } catch (Exception $e) {
+        log_activity('Role Creation Error: ' . $e->getMessage());
+        return false;
     }
+}
 
-    /**
-     * Send welcome email to newly created staff
-     */
-    private function send_staff_credentials_email($email, $password, $firstname)
-    {
-        $this->load->library('email');
-        
-        $company_name = get_option('companyname');
-        $admin_url = admin_url();
-        
-        $subject = 'Welcome to ' . $company_name . ' - Your Staff Account Credentials';
-        
-        $message = '
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
-                .content { background-color: #f9f9f9; padding: 30px; border: 1px solid #ddd; border-radius: 0 0 5px 5px; }
-                .credentials { background-color: #fff; padding: 20px; border-left: 4px solid #4CAF50; margin: 20px 0; }
-                .button { display: inline-block; padding: 12px 30px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-                .warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>Welcome to ' . htmlspecialchars($company_name) . '</h1>
+/**
+ * Generate Secure Random Password
+ */
+private function generate_secure_password($length = 12)
+{
+    $uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    $numbers = '0123456789';
+    $special = '!@#$%^&*';
+    
+    $password = '';
+    $password .= $uppercase[random_int(0, strlen($uppercase) - 1)];
+    $password .= $lowercase[random_int(0, strlen($lowercase) - 1)];
+    $password .= $numbers[random_int(0, strlen($numbers) - 1)];
+    $password .= $special[random_int(0, strlen($special) - 1)];
+    
+    $all_chars = $uppercase . $lowercase . $numbers . $special;
+    for ($i = 4; $i < $length; $i++) {
+        $password .= $all_chars[random_int(0, strlen($all_chars) - 1)];
+    }
+    
+    return str_shuffle($password);
+}
+
+/**
+ * Send Welcome Email with Staff Credentials
+ */
+private function send_staff_credentials_email($email, $password, $firstname)
+{
+    $this->load->library('email');
+    
+    $company_name = get_option('companyname');
+    $admin_url = admin_url();
+    
+    $subject = 'Welcome to ' . $company_name . ' - Your Partner Account Credentials';
+    
+    $message = '
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+            .content { background-color: #f9f9f9; padding: 30px; border: 1px solid #ddd; border-radius: 0 0 5px 5px; }
+            .credentials { background-color: #fff; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Welcome to ' . htmlspecialchars($company_name) . '!</h1>
+            </div>
+            
+            <div class="content">
+                <h2>Hello ' . htmlspecialchars($firstname) . ',</h2>
+                
+                <p>Your partner account has been created as an <strong>SLS Nodal Partner Manager</strong>.</p>
+                
+                <div class="credentials">
+                    <h3>Your Login Credentials:</h3>
+                    <p><strong>Admin URL:</strong> <a href="' . $admin_url . '">' . $admin_url . '</a></p>
+                    <p><strong>Email:</strong> ' . htmlspecialchars($email) . '</p>
+                    <p><strong>Password:</strong> <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 3px; font-family: monospace;">' . htmlspecialchars($password) . '</code></p>
                 </div>
                 
-                <div class="content">
-                    <h2>Hello ' . htmlspecialchars($firstname) . ',</h2>
-                    
-                    <p>Your staff account has been created as a <strong>Nodal Partner Manager</strong> for the SafeLegalSolutions module.</p>
-                    
-                    <div class="credentials">
-                        <h3>Your Login Credentials:</h3>
-                        <p><strong>Admin URL:</strong> <a href="' . $admin_url . '">' . $admin_url . '</a></p>
-                        <p><strong>Email:</strong> ' . htmlspecialchars($email) . '</p>
-                        <p><strong>Password:</strong> <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 3px;">' . htmlspecialchars($password) . '</code></p>
-                    </div>
-                    
-                    <div class="warning">
-                        <strong>⚠️ Security Notice:</strong> Please change your password after your first login.
-                    </div>
-                    
-                    <center>
-                        <a href="' . $admin_url . '" class="button">Login to Admin Panel</a>
-                    </center>
-                    
-                    <h3>Your Responsibilities:</h3>
-                    <ul>
-                        <li>Manage candidates registered under your branch</li>
-                        <li>Review and submit candidate profiles</li>
-                        <li>Monitor branch performance and earnings</li>
-                        <li>Provide support to registered students</li>
-                    </ul>
+                <div class="warning">
+                    <strong>⚠️ Security:</strong> Please change your password after your first login.
                 </div>
+                
+                <center>
+                    <a href="' . $admin_url . '" class="button">Login to Admin Panel</a>
+                </center>
             </div>
-        </body>
-        </html>
-        ';
-        
-        $this->email->clear();
-        $this->email->from(get_option('smtp_email'), $company_name);
-        $this->email->to($email);
-        $this->email->subject($subject);
-        $this->email->message($message);
-        $this->email->set_mailtype('html');
-        
+        </div>
+    </body>
+    </html>
+    ';
+    
+    $this->email->clear();
+    $this->email->from(get_option('smtp_email'), $company_name);
+    $this->email->to($email);
+    $this->email->subject($subject);
+    $this->email->message($message);
+    $this->email->set_mailtype('html');
+    
+    try {
         return $this->email->send();
+    } catch (Exception $e) {
+        log_activity('Email Send Exception: ' . $e->getMessage());
+        return false;
     }
-
+}
     /**
      * Delete Branch
      */
