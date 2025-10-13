@@ -8,6 +8,23 @@ Description: Branch and Candidate Management System with Role-based Access + Cli
 Version: 2.0 - Fixed Client Area Routing
 Author: Your Name
 */
+hooks()->add_action('pre_controller', 'disable_language_file_loading');
+
+function disable_language_file_loading()
+{
+    $CI = &get_instance();
+    
+    // Override the language loader
+    $CI->load->helper('language');
+    
+    // Replace lang function globally
+    if (!function_exists('_l')) {
+        function _l($line, $for = '') {
+            // Just return the key itself instead of looking for translation
+            return ucwords(str_replace('_', ' ', $line));
+        }
+    }
+}
 
 define('SAFELEGALSOLUTIONS_MODULE_NAME', 'safelegalsolutions');
 hooks()->add_action('admin_init', 'safelegalsolutions_init_module');
@@ -330,40 +347,43 @@ function safelegalsolutions_init_menu_items()
 {
     $CI = &get_instance();
 
-    // Register MANAGER capabilities (full access like admin)
+    // ============================================
+    // ✅ FIXED: Use hardcoded strings instead of _l()
+    // ============================================
+    
     // Register MANAGER capabilities (full access like admin)
     $manager_capabilities = [
         'capabilities' => [
-            'manage' => _l('permission_manage') . ' (Full SLS Access)',  // ❌ THIS LINE
+            'manage' => 'Manage (Full SLS Access)',  // ✅ FIXED - No _l()
         ],
     ];
     
     // Register candidate capabilities (for NPM)
     $npm_capabilities = [
         'capabilities' => [
-            'view'   => _l('permission_view'),    // ❌ THIS LINE
-            'create' => _l('permission_create'),  // ❌ THIS LINE
-            'edit'   => _l('permission_edit'),    // ❌ THIS LINE
+            'view'   => 'View',      // ✅ FIXED - No _l()
+            'create' => 'Create',    // ✅ FIXED - No _l()
+            'edit'   => 'Edit',      // ✅ FIXED - No _l()
         ],
     ];
     
     // Register branch capabilities (for Admin/Manager only)
     $admin_capabilities = [
         'capabilities' => [
-            'view'   => _l('permission_view'),    // ❌ THIS LINE
-            'create' => _l('permission_create'),  // ❌ THIS LINE
-            'edit'   => _l('permission_edit'),    // ❌ THIS LINE
-            'delete' => _l('permission_delete'),  // ❌ THIS LINE
+            'view'   => 'View',      // ✅ FIXED - No _l()
+            'create' => 'Create',    // ✅ FIXED - No _l()
+            'edit'   => 'Edit',      // ✅ FIXED - No _l()
+            'delete' => 'Delete',    // ✅ FIXED - No _l()
         ],
     ];
 
     // Register all capabilities
     register_staff_capabilities('safelegalsolutions_manager', $manager_capabilities, 'SLS Manager');
     register_staff_capabilities('safelegalsolutions_branches', $admin_capabilities, 'SLS Branches');
-    register_staff_capabilities('safelegalsolutions_candidates', $npm_capabilities, 'SLS Candidates');
+    register_staff_capabilities('safelegalsolutions_students', $npm_capabilities, 'SLS Candidates');
 
     // Show menu to Manager, Admin, or users with candidate permissions
-    if (is_sls_manager_or_admin() || has_permission('safelegalsolutions_candidates', '', 'view')) {
+    if (is_sls_manager_or_admin() || has_permission('safelegalsolutions_students', '', 'view')) {
         
         // Main Menu Item
         $CI->app_menu->add_sidebar_menu_item('safelegalsolutions', [
@@ -450,7 +470,7 @@ function safelegalsolutions_hide_npm_menus_css()
     $is_manager = has_permission('safelegalsolutions_manager', '', 'manage');
     
     // Check if user is NPM
-    $has_candidate_permission = has_permission('safelegalsolutions_candidates', '', 'view');
+    $has_candidate_permission = has_permission('safelegalsolutions_students', '', 'view');
     $has_no_customer_permission = !has_permission('customers', '', 'view');
     $is_npm = $has_candidate_permission && $has_no_customer_permission && !$is_manager;
     
@@ -501,7 +521,7 @@ function safelegalsolutions_redirect_npm_to_dashboard($staff_id)
     $is_manager = has_permission('safelegalsolutions_manager', '', 'manage');
     
     // Check if user is NPM
-    $has_candidate_permission = has_permission('safelegalsolutions_candidates', '', 'view');
+    $has_candidate_permission = has_permission('safelegalsolutions_students', '', 'view');
     $has_no_customer_permission = !has_permission('customers', '', 'view');
     $is_npm = $has_candidate_permission && $has_no_customer_permission && !$is_manager;
     
@@ -536,7 +556,7 @@ function safelegalsolutions_redirect_from_homepage()
         $is_manager = has_permission('safelegalsolutions_manager', '', 'manage');
         
         // Check if user is NPM
-        $has_candidate_permission = has_permission('safelegalsolutions_candidates', '', 'view');
+        $has_candidate_permission = has_permission('safelegalsolutions_students', '', 'view');
         $has_no_customer_permission = !has_permission('customers', '', 'view');
         $is_npm = $has_candidate_permission && $has_no_customer_permission && !$is_manager;
         

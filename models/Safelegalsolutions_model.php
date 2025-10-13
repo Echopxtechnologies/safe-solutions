@@ -1176,7 +1176,7 @@ public function get_students_with_packages($where = [], $limit = null)
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Welcome to ' . htmlspecialchars($company_name) . '!</h1>
+                    <h1>Welcome to Safe Legal</h1>
                 </div>
                 
                 <div class="content">

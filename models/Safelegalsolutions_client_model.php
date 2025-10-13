@@ -248,10 +248,10 @@ class Safelegalsolutions_client_model extends App_Model
         
         // Prepare email data
         $to = $student->email;
-        $subject = 'Registration Successful - Safe Legal Solutions';
+        $subject = 'Registration Successful - Safe Legal';
         
         $message = '<html><body>';
-        $message .= '<h2>Welcome to Safe Legal Solutions!</h2>';
+        $message .= '<h2>Welcome to Safe Legal</h2>';
         $message .= '<p>Dear ' . htmlspecialchars($student->student_name) . ',</p>';
         $message .= '<p>Your registration has been received successfully.</p>';
         $message .= '<p><strong>Registration Details:</strong></p>';
@@ -264,8 +264,8 @@ class Safelegalsolutions_client_model extends App_Model
         $message .= '<li>Your Referral Code: <strong>' . htmlspecialchars($student->referral_code) . '</strong></li>';
         $message .= '</ul>';
         $message .= '<p>Our team will review your application and contact you shortly.</p>';
-        $message .= '<p>Thank you for choosing Safe Legal Solutions!</p>';
-        $message .= '<p>Best regards,<br>Safe Legal Solutions Team</p>';
+        $message .= '<p>Thank you for choosing Safe Legal</p>';
+        $message .= '<p>Best regards,<br>Safe Legal Team</p>';
         $message .= '</body></html>';
         
         // Load email library
@@ -617,7 +617,7 @@ public function get_item($item_id)
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Welcome to ' . htmlspecialchars($company_name) . '!</h1>
+                    <h1>Welcome to  Safe Legal</h1>
                 </div>
                 
                 <div class="content">

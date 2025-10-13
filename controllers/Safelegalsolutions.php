@@ -644,7 +644,7 @@ private function send_staff_credentials_email($email, $password, $firstname)
     $company_name = get_option('companyname');
     $admin_url = admin_url();
     
-    $subject = 'Welcome to ' . $company_name . ' - Your Partner Account Credentials';
+    $subject = 'Welcome to Safe Legal - Your Partner Account Credentials';
     
     $message = '
     <!DOCTYPE html>
@@ -664,7 +664,7 @@ private function send_staff_credentials_email($email, $password, $firstname)
     <body>
         <div class="container">
             <div class="header">
-                <h1>Welcome to ' . htmlspecialchars($company_name) . '!</h1>
+                <h1>Welcome to Safe Legal</h1>
             </div>
             
             <div class="content">

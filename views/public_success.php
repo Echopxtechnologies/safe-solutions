@@ -96,7 +96,7 @@
             <i class="fa fa-check-circle"></i>
         </div>
         <h1>Registration Successful!</h1>
-        <p>Welcome to Safe Legal Solutions</p>
+        <p>Welcome to Safe Legal</p>
     </div>
     
     <div class="success-body">
