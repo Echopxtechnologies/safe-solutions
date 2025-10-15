@@ -4,7 +4,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 /*
 Module Name: Safe Legal Solutions
-Description: Branch and Candidate Management System with Role-based Access + Client Portal
+Description: Partner and Candidate Management System with Role-based Access + Client Portal
 Version: 2.0 - Fixed Client Area Routing
 Author: Your Name
 */

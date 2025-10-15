@@ -459,7 +459,7 @@
                     <?php endif; ?>
                 </div>
                 <small>
-                    <i class="fa fa-user"></i> Branch Manager: 
+                    <i class="fa fa-user"></i> Partner Manager: 
                     <?php echo htmlspecialchars($branch->manager_firstname . ' ' . $branch->manager_lastname); ?>
                 </small>
             </div>

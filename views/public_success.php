@@ -161,7 +161,7 @@
             <ul>
                 <li><i class="fa fa-check"></i> Our team will review your registration within 24-48 hours</li>
                 <li><i class="fa fa-envelope"></i> You will receive a confirmation email shortly</li>
-                <li><i class="fa fa-phone"></i> A branch representative may contact you for verification</li>
+                <li><i class="fa fa-phone"></i> A representative may contact you for verification</li>
     
             </ul>
         </div>

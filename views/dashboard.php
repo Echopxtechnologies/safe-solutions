@@ -46,7 +46,7 @@
                                                     <?php else: ?>
                                                         Manager: <strong><?php echo get_staff_full_name(get_staff_user_id()); ?></strong>
                                                         <span class="badge" style="background: rgba(255,255,255,0.3); margin-left: 10px;">
-                                                            <i class="fa fa-star"></i> SLS Manager
+                                                            <i class="fa fa-star"></i> SL Administrator
                                                         </span>
                                                     <?php endif; ?>
                                                 </p>

@@ -13,51 +13,45 @@
             </div>
         </div>
 
-        <!-- Registration Status Overview -->
+        <!-- Quick Info Cards -->
         <div class="row">
-            <!-- Status Card -->
+            <!-- Unique Student ID Card -->
             <div class="col-md-3 col-sm-6">
-                <div class="panel" style="border-left: 4px solid <?php 
-                    echo $student->status == 'approved' ? '#28a745' : 
-                         ($student->status == 'pending_review' ? '#ffc107' : '#6c757d'); 
-                ?>;">
-                    <div class="panel-body text-center" style="padding: 25px;">
-                        <h4 style="margin: 0 0 10px 0; font-size: 16px; color: #666;">Registration Status</h4>
-                        <h2 style="margin: 0; font-size: 24px; font-weight: bold; color: <?php 
-                            echo $student->status == 'approved' ? '#28a745' : 
-                                 ($student->status == 'pending_review' ? '#ffc107' : '#6c757d'); 
-                        ?>;">
-                            <?php 
-                            $status_display = [
-                                'draft' => 'Draft',
-                                'pending_review' => 'Under Review',
-                                'approved' => 'Approved',
-                                'locked' => 'Approved'
-                            ];
-                            echo $status_display[$student->status] ?? ucfirst($student->status);
-                            ?>
+                <div class="panel" style="border-left: 4px solid #6f42c1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="panel-body text-center" style="padding: 20px; color: white;">
+                        <h4 style="margin: 0 0 5px 0; font-size: 14px; opacity: 0.9;">Student ID</h4>
+                        <h2 style="margin: 0; font-size: 20px; font-weight: bold; font-family: monospace; letter-spacing: 2px;">
+                            <?php echo !empty($student->unique_id) ? htmlspecialchars($student->unique_id) : 'N/A'; ?>
                         </h2>
-                        <?php if ($student->is_locked == 1): ?>
-                            <div style="margin-top: 10px;">
-                                <span class="label label-success">
-                                    <i class="fa fa-lock"></i> Verified
-                                </span>
-                            </div>
-                        <?php endif; ?>
+                        <small style="opacity: 0.8; font-size: 11px;">Unique Identifier</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Passport Number Card -->
+            <div class="col-md-3 col-sm-6">
+                <div class="panel" style="border-left: 4px solid #17a2b8;">
+                    <div class="panel-body text-center" style="padding: 20px;">
+                        <h4 style="margin: 0 0 5px 0; font-size: 14px; color: #666;">Passport</h4>
+                        <h2 style="margin: 0; font-size: 18px; font-weight: bold; color: #17a2b8; font-family: monospace;">
+                            <?php echo !empty($student->passport_number) ? htmlspecialchars($student->passport_number) : 'Not Provided'; ?>
+                        </h2>
+                        <small style="color: #999; font-size: 11px;">Travel Document</small>
                     </div>
                 </div>
             </div>
 
             <!-- Profile Completion -->
             <div class="col-md-3 col-sm-6">
-                <div class="panel" style="border-left: 4px solid #17a2b8;">
-                    <div class="panel-body text-center" style="padding: 25px;">
-                        <h4 style="margin: 0 0 10px 0; font-size: 16px; color: #666;">Profile Completion</h4>
-                        <h2 style="margin: 0; font-size: 24px; font-weight: bold; color: #17a2b8;">
+                <div class="panel" style="border-left: 4px solid <?php echo ($student->profile_completion == 100) ? '#28a745' : '#ffc107'; ?>;">
+                    <div class="panel-body text-center" style="padding: 20px;">
+                        <h4 style="margin: 0 0 5px 0; font-size: 14px; color: #666;">Profile Completion</h4>
+                        <h2 style="margin: 0; font-size: 24px; font-weight: bold; color: <?php echo ($student->profile_completion == 100) ? '#28a745' : '#ffc107'; ?>;">
                             <?php echo isset($student->profile_completion) ? $student->profile_completion : 0; ?>%
                         </h2>
-                        <div class="progress" style="margin-top: 15px; height: 8px;">
-                            <div class="progress-bar progress-bar-info" style="width: <?php echo isset($student->profile_completion) ? $student->profile_completion : 0; ?>%;"></div>
+                        <div class="progress" style="margin-top: 10px; height: 6px;">
+                            <div class="progress-bar <?php echo ($student->profile_completion == 100) ? 'progress-bar-success' : 'progress-bar-warning'; ?>" 
+                                 style="width: <?php echo isset($student->profile_completion) ? $student->profile_completion : 0; ?>%;"></div>
                         </div>
                     </div>
                 </div>
@@ -68,40 +62,144 @@
                 <div class="panel" style="border-left: 4px solid <?php 
                     echo (isset($student->payment_status) && $student->payment_status == 'paid') ? '#28a745' : '#ffc107'; 
                 ?>;">
-                    <div class="panel-body text-center" style="padding: 25px;">
-                        <h4 style="margin: 0 0 10px 0; font-size: 16px; color: #666;">Payment Status</h4>
-                        <h2 style="margin: 0; font-size: 24px; font-weight: bold; color: <?php 
+                    <div class="panel-body text-center" style="padding: 20px;">
+                        <h4 style="margin: 0 0 5px 0; font-size: 14px; color: #666;">Payment Status</h4>
+                        <h2 style="margin: 0; font-size: 22px; font-weight: bold; color: <?php 
                             echo (isset($student->payment_status) && $student->payment_status == 'paid') ? '#28a745' : '#ffc107'; 
                         ?>;">
                             <?php 
                             if (isset($student->payment_status)) {
-                                echo $student->payment_status == 'paid' ? 'Paid' : 'Pending';
+                                echo $student->payment_status == 'paid' ? 'PAID' : 'PENDING';
                             } else {
-                                echo 'Pending';
+                                echo 'PENDING';
                             }
                             ?>
                         </h2>
                         <?php if (isset($student->payment_percentage) && $student->payment_percentage > 0): ?>
-                            <p style="margin: 10px 0 0 0; font-size: 12px; color: #666;">
-                                <?php echo $student->payment_percentage; ?>% Complete
-                            </p>
+                            <small style="color: #666; font-size: 11px;">
+                                <?php echo number_format($student->payment_percentage, 0); ?>% Complete
+                            </small>
                         <?php endif; ?>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Days Since Registration -->
-            <div class="col-md-3 col-sm-6">
-                <div class="panel" style="border-left: 4px solid #6f42c1;">
-                    <div class="panel-body text-center" style="padding: 25px;">
-                        <h4 style="margin: 0 0 10px 0; font-size: 16px; color: #666;">Member Since</h4>
-                        <h2 style="margin: 0; font-size: 24px; font-weight: bold; color: #6f42c1;">
-                            <?php echo $days_since_registration; ?>
-                        </h2>
-                        <p style="margin: 10px 0 0 0; font-size: 12px; color: #666;">
-                            Days
-                        </p>
+        <!-- Course Timeline Card -->
+        <?php if ($enrollment): ?>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="panel panel-success">
+                    <div class="panel-heading">
+                        <h4 class="panel-title">
+                            <i class="fa fa-calendar"></i> Course Timeline
+                        </h4>
                     </div>
+                    <div class="panel-body">
+                        <div class="row">
+                            <!-- Start Date -->
+                            <div class="col-md-3 text-center">
+                                <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                                    <i class="fa fa-play-circle" style="font-size: 36px; color: #28a745; margin-bottom: 10px;"></i>
+                                    <h5 style="margin: 10px 0 5px 0; color: #666;">Course Start Date</h5>
+                                    <h3 style="margin: 0; color: #333; font-weight: bold;">
+                                        <?php echo date('d M Y', strtotime($enrollment->start_date)); ?>
+                                    </h3>
+                                </div>
+                            </div>
+
+                            <!-- Duration -->
+                            <div class="col-md-3 text-center">
+                                <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                                    <i class="fa fa-clock-o" style="font-size: 36px; color: #17a2b8; margin-bottom: 10px;"></i>
+                                    <h5 style="margin: 10px 0 5px 0; color: #666;">Course Duration</h5>
+                                    <h3 style="margin: 0; color: #333; font-weight: bold;">
+                                        <?php echo $enrollment->duration_months; ?> Months
+                                    </h3>
+                                </div>
+                            </div>
+
+                            <!-- End Date -->
+                            <div class="col-md-3 text-center">
+                                <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                                    <i class="fa fa-flag-checkered" style="font-size: 36px; color: #ffc107; margin-bottom: 10px;"></i>
+                                    <h5 style="margin: 10px 0 5px 0; color: #666;">Course End Date</h5>
+                                    <h3 style="margin: 0; color: #333; font-weight: bold;">
+                                        <?php echo date('d M Y', strtotime($enrollment->end_date)); ?>
+                                    </h3>
+                                </div>
+                            </div>
+
+                            <!-- Days Remaining -->
+                            <div class="col-md-3 text-center">
+                                <div style="padding: 20px; background: <?php echo ($days_until_end >= 0) ? '#e8f5e9' : '#ffebee'; ?>; border-radius: 8px;">
+                                    <i class="fa fa-hourglass-half" style="font-size: 36px; color: <?php echo ($days_until_end >= 0) ? '#4caf50' : '#f44336'; ?>; margin-bottom: 10px;"></i>
+                                    <h5 style="margin: 10px 0 5px 0; color: #666;">
+                                        <?php echo ($days_until_end >= 0) ? 'Days Remaining' : 'Course Ended'; ?>
+                                    </h5>
+                                    <h3 style="margin: 0; color: <?php echo ($days_until_end >= 0) ? '#4caf50' : '#f44336'; ?>; font-weight: bold;">
+                                        <?php echo abs($days_until_end); ?>
+                                    </h3>
+                                    <?php if ($days_until_end < 0): ?>
+                                        <small style="color: #666;">days ago</small>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <?php if ($days_until_end >= 0): ?>
+                        <?php 
+                        $start = new DateTime($enrollment->start_date);
+                        $end = new DateTime($enrollment->end_date);
+                        $today = new DateTime();
+                        $total_days = $start->diff($end)->days;
+                        $elapsed_days = $start->diff($today)->days;
+                        $progress = ($total_days > 0) ? min(100, ($elapsed_days / $total_days) * 100) : 0;
+                        ?>
+                        <div style="margin-top: 20px;">
+                            <div class="progress" style="height: 25px; border-radius: 12px; background: #e0e0e0;">
+                                <div class="progress-bar progress-bar-success progress-bar-striped active" 
+                                     style="width: <?php echo $progress; ?>%; line-height: 25px; font-size: 14px; font-weight: bold;">
+                                    <?php echo number_format($progress, 1); ?>% Complete
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Registration Status Overview -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="alert <?php 
+                    echo $student->status == 'approved' ? 'alert-success' : 
+                         ($student->status == 'pending_review' ? 'alert-warning' : 'alert-info'); 
+                ?>" style="border-left: 5px solid;">
+                    <h4 style="margin-top: 0;">
+                        <i class="fa <?php 
+                            echo $student->status == 'approved' ? 'fa-check-circle' : 
+                                 ($student->status == 'pending_review' ? 'fa-clock-o' : 'fa-info-circle'); 
+                        ?>"></i> 
+                        Status: 
+                        <strong><?php 
+                            $status_display = [
+                                'draft' => 'Draft',
+                                'pending_review' => 'Under Review',
+                                'approved' => 'Approved',
+                                'locked' => 'Approved & Verified'
+                            ];
+                            echo $status_display[$student->status] ?? ucfirst($student->status);
+                        ?></strong>
+                        <?php if ($student->is_locked == 1): ?>
+                            <span class="label label-success pull-right" style="font-size: 14px; padding: 8px 15px;">
+                                <i class="fa fa-lock"></i> VERIFIED
+                            </span>
+                        <?php endif; ?>
+                    </h4>
                 </div>
             </div>
         </div>
@@ -133,9 +231,9 @@
                             </div>
                             
                             <div class="col-md-4 col-sm-6 text-center" style="margin-bottom: 15px;">
-                                <a href="<?php echo site_url('clients/profile'); ?>" class="btn btn-warning btn-block btn-lg">
-                                    <i class="fa fa-cog fa-2x" style="display: block; margin-bottom: 10px;"></i>
-                                    Account Settings
+                                <a href="<?php echo site_url('clients/safelegalsolutions_client/referral_card'); ?>" class="btn btn-warning btn-block btn-lg">
+                                    <i class="fa fa-share-alt fa-2x" style="display: block; margin-bottom: 10px;"></i>
+                                    Referral Card
                                 </a>
                             </div>
                         </div>
@@ -144,28 +242,28 @@
             </div>
         </div>
 
-        <!-- Registration Details -->
+        <!-- Package & Branch Info -->
         <div class="row">
-            <!-- Course & Branch Info -->
+            <!-- Branch Info -->
             <div class="col-md-6">
                 <div class="panel panel-primary">
                     <div class="panel-heading">
                         <h4 class="panel-title">
-                            <i class="fa fa-graduation-cap"></i> Course & Branch Information
+                            <i class="fa fa-building"></i> Branch Information
                         </h4>
                     </div>
                     <div class="panel-body">
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td style="font-weight: bold;">
+                                    <td style="font-weight: bold; width: 40%;">
                                         <i class="fa fa-building"></i> Branch
                                     </td>
                                     <td>
                                         <?php echo htmlspecialchars($branch->branch_name); ?>
                                         <?php if (!empty($branch->category_name)): ?>
                                             <br>
-                                            <span class="badge" style="background: <?php echo $branch->color_code; ?>;">
+                                            <span class="badge" style="background: <?php echo $branch->color_code ?? '#007bff'; ?>; margin-top: 5px;">
                                                 <?php echo htmlspecialchars($branch->category_name); ?>
                                             </span>
                                         <?php endif; ?>
@@ -173,13 +271,13 @@
                                 </tr>
                                 <tr>
                                     <td style="font-weight: bold;">
-                                        <i class="fa fa-map-marker"></i> Branch Location
+                                        <i class="fa fa-map-marker"></i> Location
                                     </td>
                                     <td><?php echo htmlspecialchars($branch->location); ?></td>
                                 </tr>
                                 <tr>
                                     <td style="font-weight: bold;">
-                                        <i class="fa fa-phone"></i> Branch Contact
+                                        <i class="fa fa-phone"></i> Contact
                                     </td>
                                     <td>
                                         <a href="tel:<?php echo $branch->contact_phone; ?>">
@@ -207,19 +305,19 @@
                                 <tbody>
                                     <tr>
                                         <td style="width: 40%; font-weight: bold;">
-                                            <i class="fa fa-cube"></i> Package Name
+                                            <i class="fa fa-cube"></i> Package
                                         </td>
                                         <td><?php echo htmlspecialchars($item->item_name); ?></td>
                                     </tr>
                                     <tr>
                                         <td style="font-weight: bold;">
-                                            <i class="fa fa-tag"></i> Package Code
+                                            <i class="fa fa-tag"></i> Code
                                         </td>
                                         <td><code><?php echo htmlspecialchars($item->item_code); ?></code></td>
                                     </tr>
                                     <tr>
                                         <td style="font-weight: bold;">
-                                            <i class="fa fa-rupee"></i> Total Price
+                                            <i class="fa fa-rupee"></i> Price
                                         </td>
                                         <td>
                                             <strong style="font-size: 18px; color: #28a745;">
@@ -245,139 +343,5 @@
             </div>
         </div>
 
-        <!-- Recent Activity / Timeline -->
-        <div class="row">
-            <div class="col-md-12">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <h4 class="panel-title">
-                            <i class="fa fa-history"></i> Registration Timeline
-                        </h4>
-                    </div>
-                    <div class="panel-body">
-                        <div class="timeline">
-                            <div class="timeline-item">
-                                <div class="timeline-badge success">
-                                    <i class="fa fa-check"></i>
-                                </div>
-                                <div class="timeline-panel">
-                                    <div class="timeline-heading">
-                                        <h4 class="timeline-title">Registration Completed</h4>
-                                        <p><small class="text-muted">
-                                            <i class="fa fa-clock-o"></i> 
-                                            <?php echo date('d M Y, h:i A', strtotime($student->created_at)); ?>
-                                        </small></p>
-                                    </div>
-                                    <div class="timeline-body">
-                                        <p>Your registration was successfully submitted and recorded in our system.</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <?php if ($student->status == 'pending_review' || $student->status == 'approved' || $student->status == 'locked'): ?>
-                            <div class="timeline-item">
-                                <div class="timeline-badge warning">
-                                    <i class="fa fa-clock-o"></i>
-                                </div>
-                                <div class="timeline-panel">
-                                    <div class="timeline-heading">
-                                        <h4 class="timeline-title">Under Review</h4>
-                                        <p><small class="text-muted">
-                                            <i class="fa fa-clock-o"></i> Processing
-                                        </small></p>
-                                    </div>
-                                    <div class="timeline-body">
-                                        <p>Your application is being reviewed by our team.</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <?php endif; ?>
-
-                            <?php if ($student->status == 'approved' || $student->status == 'locked'): ?>
-                            <div class="timeline-item">
-                                <div class="timeline-badge success">
-                                    <i class="fa fa-check-circle"></i>
-                                </div>
-                                <div class="timeline-panel">
-                                    <div class="timeline-heading">
-                                        <h4 class="timeline-title">Approved & Verified</h4>
-                                        <p><small class="text-muted">
-                                            <i class="fa fa-clock-o"></i> 
-                                            <?php echo !empty($student->locked_at) ? date('d M Y, h:i A', strtotime($student->locked_at)) : 'Recently'; ?>
-                                        </small></p>
-                                    </div>
-                                    <div class="timeline-body">
-                                        <p>Congratulations! Your registration has been approved and verified.</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
 </div>
-
-<style>
-/* Timeline Styles */
-.timeline {
-    position: relative;
-    padding: 20px 0;
-}
-
-.timeline:before {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 20px;
-    width: 3px;
-    background: #e0e0e0;
-}
-
-.timeline-item {
-    position: relative;
-    margin-bottom: 30px;
-    padding-left: 60px;
-}
-
-.timeline-badge {
-    position: absolute;
-    left: 8px;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    text-align: center;
-    line-height: 28px;
-    color: white;
-    z-index: 100;
-}
-
-.timeline-badge.success {
-    background-color: #28a745;
-}
-
-.timeline-badge.warning {
-    background-color: #ffc107;
-}
-
-.timeline-panel {
-    background: #f8f9fa;
-    border: 1px solid #e0e0e0;
-    border-radius: 5px;
-    padding: 15px;
-}
-
-.timeline-title {
-    margin-top: 0;
-    color: #333;
-    font-size: 18px;
-}
-
-.timeline-body {
-    margin-top: 10px;
-}
-</style>

@@ -8,10 +8,10 @@
                 <div class="panel_s">
                     <div class="panel-body">
                         <h4 class="no-margin">
-                            <i class="fa fa-home"></i> My Branch: <?php echo htmlspecialchars($branch->branch_name); ?>
+                            <i class="fa fa-home"></i> My Partner: <?php echo htmlspecialchars($branch->branch_name); ?>
                             <?php if (!is_admin()): ?>
                                 <span class="badge" style="background: #667eea; color: white; margin-left: 10px; padding: 8px 15px; font-size: 13px;">
-                                    <i class="fa fa-star"></i> SLS Manager
+                                    <i class="fa fa-star"></i> SL Administrator
                                 </span>
                             <?php endif; ?>
                         </h4>
@@ -21,11 +21,11 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="sls-card">
-                                    <h4><i class="fa fa-info-circle"></i> Branch Details</h4>
+                                    <h4><i class="fa fa-info-circle"></i> Partner Details</h4>
                                     <table class="table table-borderless">
                                         <tbody>
                                             <tr>
-                                                <td style="width: 40%;"><strong>Branch Code:</strong></td>
+                                                <td style="width: 40%;"><strong>Partner Code:</strong></td>
                                                 <td><?php echo htmlspecialchars($branch->branch_code); ?></td>
                                             </tr>
                                             <tr>
@@ -53,13 +53,13 @@
                                                     <?php if (is_admin()): ?>
                                                         <span class="label label-danger"><i class="fa fa-shield"></i> System Administrator</span>
                                                     <?php else: ?>
-                                                        <span class="label label-primary"><i class="fa fa-star"></i> SLS Manager</span>
-                                                        <br><small class="text-muted" style="font-size: 11px;">Full SLS Module Access</small>
+                                                        <span class="label label-primary"><i class="fa fa-star"></i> SL Manager</span>
+                                                        <br><small class="text-muted" style="font-size: 11px;">Full SL Module Access</small>
                                                     <?php endif; ?>
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <td><strong>Branch Status:</strong></td>
+                                                <td><strong>Partner Status:</strong></td>
                                                 <td>
                                                     <?php if ($branch->is_active == 1): ?>
                                                         <span class="label label-success"><i class="fa fa-check"></i> Active</span>
@@ -67,7 +67,7 @@
                                                         <span class="label label-default"><i class="fa fa-times"></i> Inactive</span>
                                                     <?php endif; ?>
                                                     <?php if ($branch->is_default == 1): ?>
-                                                        <span class="label label-primary"><i class="fa fa-home"></i> Default Branch</span>
+                                                        <span class="label label-primary"><i class="fa fa-home"></i> Default Partner</span>
                                                     <?php endif; ?>
                                                 </td>
                                             </tr>
@@ -88,7 +88,7 @@
 
                             <div class="col-md-6">
                                 <div class="sls-card">
-                                    <h4><i class="fa fa-bar-chart"></i> Branch Statistics</h4>
+                                    <h4><i class="fa fa-bar-chart"></i> Partner Statistics</h4>
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="sls-stat-box" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">

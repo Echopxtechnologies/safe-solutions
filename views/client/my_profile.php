@@ -176,7 +176,7 @@
                 <div class="panel panel-info">
                     <div class="panel-heading">
                         <h4 class="panel-title">
-                            <i class="fa fa-building"></i> Branch Details
+                            <i class="fa fa-building"></i> Partner Details
                         </h4>
                     </div>
                     <div class="panel-body">

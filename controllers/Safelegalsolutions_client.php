@@ -719,60 +719,80 @@ class Safelegalsolutions_client extends ClientsController
      * @return void
      */
     public function my_dashboard()
-    {
-        // Double-check authentication (redundant but safe)
-        if (!is_client_logged_in()) {
-            redirect(site_url('authentication/login'));
-            return;
-        }
-        
-        // Get logged-in contact
-        $contact = $this->clients_model->get_contact(get_contact_user_id());
-        
-        if (!$contact) {
-            show_404();
-            return;
-        }
-        
-        // Get student record linked to this client
-        $student = $this->safelegalsolutions_client_model->get_student_by_client_id($contact->userid);
-        
-        if (!$student) {
-            // No student record found
-            $data['title'] = 'Dashboard';
-            $data['error'] = 'No registration record found for your account.';
-            $this->data($data);
-            $this->view('safelegalsolutions/client/no_record');
-            $this->layout();
-            return;
-        }
-        
-        // Get branch information
-        $branch = $this->safelegalsolutions_client_model->get_branch($student->branch_id);
-        
-        // Get package/item information
-        $item = null;
-        if (!empty($student->item_id)) {
-            $item = $this->safelegalsolutions_client_model->get_item($student->item_id);
-        }
-        
-        // Calculate days since registration
-        $registration_date = new DateTime($student->created_at);
-        $today = new DateTime();
-        $days_since_registration = $today->diff($registration_date)->days;
-        
-        // Prepare dashboard data
-        $data['title'] = 'My Dashboard';
-        $data['student'] = $student;
-        $data['branch'] = $branch;
-        $data['item'] = $item;
-        $data['days_since_registration'] = $days_since_registration;
-        
-        // Load dashboard view
-        $this->data($data);
-        $this->view('safelegalsolutions/client/my_dashboard');
-        $this->layout();
+{
+    // Double-check authentication (redundant but safe)
+    if (!is_client_logged_in()) {
+        redirect(site_url('authentication/login'));
+        return;
     }
+    
+    // Get logged-in contact
+    $contact = $this->clients_model->get_contact(get_contact_user_id());
+    
+    if (!$contact) {
+        show_404();
+        return;
+    }
+    
+    // Get student record linked to this client
+    $student = $this->safelegalsolutions_client_model->get_student_by_client_id($contact->userid);
+    
+    if (!$student) {
+        // No student record found
+        $data['title'] = 'Dashboard';
+        $data['error'] = 'No registration record found for your account.';
+        $this->data($data);
+        $this->view('safelegalsolutions/client/no_record');
+        $this->layout();
+        return;
+    }
+    
+    // Get branch information
+    $branch = $this->safelegalsolutions_client_model->get_branch($student->branch_id);
+    
+    // Get package/item information
+    $item = null;
+    if (!empty($student->item_id)) {
+        $item = $this->safelegalsolutions_client_model->get_item($student->item_id);
+    }
+    
+    // ✅ NEW: Get enrollment information (course start/end dates)
+    $enrollment = null;
+    if ($student->id) {
+        $enrollment = $this->safelegalsolutions_client_model->get_enrollment_by_student($student->id);
+    }
+    
+    // Calculate days since registration
+    $registration_date = new DateTime($student->created_at);
+    $today = new DateTime();
+    $days_since_registration = $today->diff($registration_date)->days;
+    
+    // ✅ NEW: Calculate days until course ends (if enrollment exists)
+    $days_until_end = null;
+    if ($enrollment && !empty($enrollment->end_date)) {
+        $end_date = new DateTime($enrollment->end_date);
+        $days_until_end = $today->diff($end_date)->days;
+        
+        // Check if course already ended
+        if ($today > $end_date) {
+            $days_until_end = -$days_until_end; // Negative means expired
+        }
+    }
+    
+    // Prepare dashboard data
+    $data['title'] = 'My Dashboard';
+    $data['student'] = $student;
+    $data['branch'] = $branch;
+    $data['item'] = $item;
+    $data['enrollment'] = $enrollment; // ✅ NEW
+    $data['days_since_registration'] = $days_since_registration;
+    $data['days_until_end'] = $days_until_end; // ✅ NEW
+    
+    // Load dashboard view
+    $this->data($data);
+    $this->view('safelegalsolutions/client/my_dashboard');
+    $this->layout();
+}
 
     /**
      * Client Profile View - Shows complete student details

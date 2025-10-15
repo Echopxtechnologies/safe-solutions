@@ -851,4 +851,24 @@ public function get_student_by_client_id($client_id)
     
     return $this->db->get($this->table_students)->row();
 }
+
+
+// client enrolment id 
+/**
+ * Get enrollment by student ID
+ * 
+ * @param int $student_id Student ID
+ * @return object|null Enrollment record
+ */
+public function get_enrollment_by_student($student_id)
+{
+    $this->db->select('e.*, i.item_name, i.item_code');
+    $this->db->from('tblsls_package_enrollments e');
+    $this->db->join('tblsls_items i', 'i.id = e.item_id', 'left');
+    $this->db->where('e.student_id', $student_id);
+    $this->db->order_by('e.created_at', 'DESC');
+    $this->db->limit(1);
+    
+    return $this->db->get()->row();
+}
 }

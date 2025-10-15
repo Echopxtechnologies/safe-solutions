@@ -18,7 +18,7 @@
                         <div class="row">
                             <div class="col-md-12">
                                 <h4 class="bold">
-                                    <i class="fa fa-info-circle"></i> Branch Information
+                                    <i class="fa fa-info-circle"></i> Partner Information
                                 </h4>
                                 <hr style="margin-top: 5px; margin-bottom: 15px;">
                             </div>
@@ -53,7 +53,7 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="branch_name" class="control-label">
-                                        <span class="text-danger">*</span> Branch Name
+                                        <span class="text-danger">*</span> Partner Name
                                     </label>
                                     <input type="text" name="branch_name" id="branch_name" 
                                            class="form-control" required
@@ -73,7 +73,7 @@
                                            class="form-control" 
                                            placeholder="Auto-generated if empty"
                                            value="<?php echo isset($branch) ? htmlspecialchars($branch->branch_code) : ''; ?>">
-                                    <small class="text-muted">Unique identifier for this branch</small>
+                                    <small class="text-muted">Unique identifier for this Partner</small>
                                 </div>
                             </div>
 
@@ -110,7 +110,7 @@
                                            class="form-control"
                                            placeholder="+91 9876543210"
                                            value="<?php echo isset($branch) ? htmlspecialchars($branch->contact_phone) : ''; ?>">
-                                    <small class="text-muted">Branch contact number</small>
+                                    <small class="text-muted">Partner contact number</small>
                                 </div>
                             </div>
                         </div>
@@ -163,7 +163,7 @@
                                     <li>Create a staff account with "SLS Nodal Partner Manager" role</li>
                                     <li>Grant access ONLY to SafeLegalSolutions module</li>
                                     <li>Send login credentials via email</li>
-                                    <li>Automatically assign this partner to the branch</li>
+                
                                 </ul>
                             </div>
 
