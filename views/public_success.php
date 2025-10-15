@@ -128,6 +128,32 @@
             <small style="color: #856404;">Save this code for future reference</small>
         </div>
         <?php endif; ?>
+        <!-- Unique ID Display -->
+        <?php if (isset($student_id) && !empty($student_id)): ?>
+            <?php 
+            // Get student unique_id from database
+            $CI =& get_instance();
+            $CI->load->model('safelegalsolutions/safelegalsolutions_client_model');
+            $student_record = $CI->safelegalsolutions_client_model->get_student($student_id);
+            
+            if ($student_record && !empty($student_record->unique_id)): 
+            ?>
+            <div class="info-card" style="background: #e3f2fd; border-left-color: #2196f3;">
+                <h4 style="margin-top: 0; color: #1976d2;">
+                    <i class="fa fa-id-card-o"></i> Your Student Unique ID
+                </h4>
+                <div style="text-align: center; padding: 15px; background: white; border-radius: 5px; border: 2px solid #2196f3;">
+                    <p style="margin: 0 0 10px 0; color: #1976d2; font-size: 14px;">
+                        <strong>Student Unique ID</strong>
+                    </p>
+                    <div style="font-size: 28px; font-weight: bold; color: #1976d2; letter-spacing: 2px; font-family: monospace;">
+                        <?php echo htmlspecialchars($student_record->unique_id); ?>
+                    </div>
+                    <small style="color: #666;">This ID will be used for all future correspondence</small>
+                </div>
+            </div>
+            <?php endif; ?>
+        <?php endif; ?>
         
         <!-- Next Steps -->
         <div class="next-steps">

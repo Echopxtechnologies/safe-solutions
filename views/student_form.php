@@ -120,6 +120,42 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- PASSPORT NUMBER ROW - FIXED PLACEMENT -->
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label for="passport_number" class="control-label">
+                                                <span class="text-danger">*</span> Passport Number
+                                            </label>
+                                            <input type="text" name="passport_number" id="passport_number" 
+                                                   class="form-control" required
+                                                   placeholder="Enter passport number"
+                                                   pattern="[A-Z0-9]+"
+                                                   style="text-transform: uppercase;"
+                                                   value="<?php echo isset($student) ? htmlspecialchars($student->passport_number) : ''; ?>">
+                                            <small class="text-muted">Valid passport number (letters and numbers only, minimum 6 characters)</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- UNIQUE ID DISPLAY - ONLY FOR EDIT MODE -->
+                                <?php if (isset($student) && !empty($student->unique_id)): ?>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="alert alert-info" style="background: #e3f2fd; border-left: 4px solid #2196f3;">
+                                            <i class="fa fa-id-card-o"></i> 
+                                            <strong>Student Unique ID:</strong>
+                                            <code style="font-size: 16px; color: #1976d2; background: white; padding: 5px 15px; border-radius: 4px; margin-left: 10px;">
+                                                <?php echo htmlspecialchars($student->unique_id); ?>
+                                            </code>
+                                            <button type="button" class="btn btn-xs btn-primary" onclick="copyUniqueId()" style="margin-left: 10px;">
+                                                <i class="fa fa-copy"></i> Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
                             </div>
                         </div>
 
@@ -174,7 +210,6 @@
                             </div>
                         </div>
 
-                 
                         <!-- Package Selection & Payment Tracking -->
                         <div class="panel panel-warning">
                             <div class="panel-heading">
@@ -243,96 +278,79 @@
 
                                 <hr style="border-top: 2px dashed #ddd; margin: 20px 0;">
 
-                              <!-- Payment Collection Section -->
-<div class="row">
-    <div class="col-md-12">
-        <h5 style="margin-top: 0; margin-bottom: 15px;">
-            <i class="fa fa-money"></i> Payment Information
-        </h5>
-    </div>
-</div>
+                                <!-- Payment Collection Section -->
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <h5 style="margin-top: 0; margin-bottom: 15px;">
+                                            <i class="fa fa-money"></i> Payment Information
+                                        </h5>
+                                    </div>
+                                </div>
 
-<div class="row">
-    <div class="col-md-4">
-        <div class="form-group">
-            <label for="payment_status" class="control-label">
-                <span class="text-danger">*</span> Payment Status
-            </label>
-            <select name="payment_status" id="payment_status" class="form-control" required>
-                <option value="unpaid" <?php echo (isset($student) && $student->payment_status == 'unpaid') ? 'selected' : ''; ?>>
-                    Unpaid
-                </option>
-                <option value="partial" <?php echo (isset($student) && $student->payment_status == 'partial') ? 'selected' : ''; ?>>
-                    Partial Payment
-                </option>
-                <option value="paid" <?php echo (isset($student) && $student->payment_status == 'paid') ? 'selected' : ''; ?>>
-                    Fully Paid
-                </option>
-            </select>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="form-group">
-            <label for="amount_paid" class="control-label">Amount Paid</label>
-            <input type="number" name="amount_paid" id="amount_paid" 
-                   class="form-control" 
-                   min="0" 
-                   step="0.01"
-                   placeholder="0.00"
-                   value="<?php echo isset($student) ? $student->amount_paid : '0.00'; ?>">
-            <small class="text-muted">Enter amount received</small>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="form-group">
-            <label for="payment_method" class="control-label">Payment Method</label>
-            <select name="payment_method" id="payment_method" class="form-control">
-                <option value="cash">Cash</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="upi">UPI</option>
-                <option value="card">Card</option>
-                <option value="other">Other</option>
-            </select>
-        </div>
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-md-6">
-        <div class="form-group">
-            <label for="payment_date" class="control-label">Payment Date</label>
-            <input type="date" name="payment_date" id="payment_date" 
-                   class="form-control"
-                   max="<?php echo date('Y-m-d'); ?>"
-                   value="<?php echo date('Y-m-d'); ?>">
-        </div>
-    </div>
-
-    <div class="col-md-6">
-        <div class="form-group">
-            <label for="transaction_reference" class="control-label">Transaction Reference</label>
-            <input type="text" name="transaction_reference" id="transaction_reference" 
-                   class="form-control"
-                   placeholder="UTR/Ref Number (optional)">
-        </div>
-    </div>
-</div>
-                                            <small class="text-muted">
-                                                <i class="fa fa-info-circle"></i> Check this if you have received the payment in cash
-                                            </small>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="payment_status" class="control-label">
+                                                <span class="text-danger">*</span> Payment Status
+                                            </label>
+                                            <select name="payment_status" id="payment_status" class="form-control" required>
+                                                <option value="unpaid" <?php echo (isset($student) && $student->payment_status == 'unpaid') ? 'selected' : ''; ?>>
+                                                    Unpaid
+                                                </option>
+                                                <option value="partial" <?php echo (isset($student) && $student->payment_status == 'partial') ? 'selected' : ''; ?>>
+                                                    Partial Payment
+                                                </option>
+                                                <option value="paid" <?php echo (isset($student) && $student->payment_status == 'paid') ? 'selected' : ''; ?>>
+                                                    Fully Paid
+                                                </option>
+                                            </select>
                                         </div>
                                     </div>
 
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="amount_paid" class="control-label">Amount Paid</label>
+                                            <input type="number" name="amount_paid" id="amount_paid" 
+                                                   class="form-control" 
+                                                   min="0" 
+                                                   step="0.01"
+                                                   placeholder="0.00"
+                                                   value="<?php echo isset($student) ? $student->amount_paid : '0.00'; ?>">
+                                            <small class="text-muted">Enter amount received</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="payment_method" class="control-label">Payment Method</label>
+                                            <select name="payment_method" id="payment_method" class="form-control">
+                                                <option value="cash">Cash</option>
+                                                <option value="bank_transfer">Bank Transfer</option>
+                                                <option value="upi">UPI</option>
+                                                <option value="card">Card</option>
+                                                <option value="other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label for="payment_date" class="control-label">Payment Date</label>
                                             <input type="date" name="payment_date" id="payment_date" 
                                                    class="form-control"
                                                    max="<?php echo date('Y-m-d'); ?>"
-                                                   value="<?php echo isset($student) && !empty($student->payment_date) ? $student->payment_date : date('Y-m-d'); ?>">
-                                            <small class="text-muted">Date when payment was received</small>
+                                                   value="<?php echo date('Y-m-d'); ?>">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="transaction_reference" class="control-label">Transaction Reference</label>
+                                            <input type="text" name="transaction_reference" id="transaction_reference" 
+                                                   class="form-control"
+                                                   placeholder="UTR/Ref Number (optional)">
                                         </div>
                                     </div>
                                 </div>
@@ -342,24 +360,11 @@
                                         <div class="form-group">
                                             <label for="payment_notes" class="control-label">Payment Notes (Optional)</label>
                                             <textarea name="payment_notes" id="payment_notes" class="form-control" rows="2"
-                                                      placeholder="Add any notes about the payment (receipt number, installment details, etc.)"><?php echo isset($student) ? htmlspecialchars($student->payment_notes) : ''; ?></textarea>
+                                                      placeholder="Add any notes about the payment (receipt number, installment details, etc.)"></textarea>
+                                            <small class="text-muted">These notes will be saved with the payment transaction</small>
                                         </div>
                                     </div>
                                 </div>
-
-                                <?php if (isset($student) && !empty($student->payment_collected)): ?>
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <div class="alert alert-success" style="margin-bottom: 0;">
-                                            <i class="fa fa-check-circle"></i> 
-                                            <strong>Payment Status: PAID</strong>
-                                            <?php if (!empty($student->payment_date)): ?>
-                                                <br>Payment Date: <strong><?php echo date('d M Y', strtotime($student->payment_date)); ?></strong>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                </div>
-                                <?php endif; ?>
                             </div>
                         </div>
 
@@ -560,8 +565,6 @@ $(function() {
     calculateCompletion();
     updatePriceDisplay();
     <?php endif; ?>
-
-   
 });
 
 // Update price display based on selected package
@@ -597,7 +600,8 @@ function calculateCompletion() {
         'phone',
         'address',
         'date_of_birth',
-        'item_id'  // Added package selection to required fields
+        'passport_number',
+        'item_id'
     ];
     
     var filled = 0;
@@ -643,6 +647,36 @@ function copyReferralCode() {
     }
 }
 
+// Copy unique ID to clipboard
+function copyUniqueId() {
+    var uniqueId = '<?php echo isset($student) ? $student->unique_id : ""; ?>';
+    
+    if (!uniqueId) {
+        alert('No unique ID available');
+        return;
+    }
+    
+    // Create temporary input
+    var tempInput = document.createElement('input');
+    tempInput.value = uniqueId;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    
+    try {
+        document.execCommand('copy');
+        alert('Unique ID copied: ' + uniqueId);
+    } catch (err) {
+        alert('Failed to copy unique ID');
+    }
+    
+    document.body.removeChild(tempInput);
+}
+
+// Auto-uppercase passport number
+$('#passport_number').on('input', function() {
+    this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+});
+
 // Form validation
 $('#candidate-form').on('submit', function(e) {
     // Validate package selection
@@ -667,6 +701,19 @@ $('#candidate-form').on('submit', function(e) {
     if (phone.replace(/[^0-9]/g, '').length < 10) {
         alert('Please enter a valid 10-digit phone number');
         $('#phone').focus();
+        return false;
+    }
+    
+    // Validate passport number
+    var passport = $('#passport_number').val();
+    if (!passport || passport.trim() === '') {
+        alert('Please enter passport number');
+        $('#passport_number').focus();
+        return false;
+    }
+    if (passport.length < 6) {
+        alert('Please enter a valid passport number (minimum 6 characters)');
+        $('#passport_number').focus();
         return false;
     }
     

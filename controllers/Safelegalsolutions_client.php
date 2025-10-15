@@ -181,7 +181,16 @@ class Safelegalsolutions_client extends ClientsController
             'required',
             'callback_validate_age'
         ]);
-        
+        // Passport Number: Required, alphanumeric, minimum 6 characters
+        $this->form_validation->set_rules('passport_number', 'Passport Number', [
+            'required',
+            'trim',
+            'min_length[6]',
+            'max_length[50]',
+            'regex_match[/^[A-Z0-9]+$/]'
+        ], [
+            'regex_match' => 'The {field} must contain only uppercase letters and numbers.'
+        ]);
         // Package Selection: Required, must exist and be active
         $this->form_validation->set_rules('item_id', 'Package Selection', [
             'required',
@@ -219,6 +228,7 @@ class Safelegalsolutions_client extends ClientsController
             'phone'          => trim($post_data['phone']),
             'address'        => trim($post_data['address']),
             'date_of_birth'  => $post_data['date_of_birth'],
+            'passport_number' => strtoupper(trim($post_data['passport_number'])),
             'item_id'        => $post_data['item_id']
         ]);
         
@@ -300,6 +310,37 @@ class Safelegalsolutions_client extends ClientsController
      */
     private function _complete_registration($registration_data, $branch, $item)
     {
+
+        // ============================================================
+        // PREPARE STUDENT DATA
+        // ============================================================
+
+        // Debug: Check if passport_number exists in registration_data
+        if (isset($registration_data['passport_number']) && !empty($registration_data['passport_number'])) {
+            log_activity('Public Registration - Passport found in session: ' . $registration_data['passport_number']);
+        } else {
+            log_activity('Public Registration - WARNING: Passport NOT found in session data');
+        }
+
+        // Generate unique_id from passport number
+        $passport = isset($registration_data['passport_number']) ? strtoupper(trim($registration_data['passport_number'])) : '';
+        $unique_id = '';
+
+        try {
+            $unique_id = $this->safelegalsolutions_client_model->generate_unique_id($passport);
+            log_activity('Public Registration - Unique ID generated: ' . $unique_id);
+        } catch (Exception $e) {
+            log_activity('Public Registration - ERROR generating unique_id: ' . $e->getMessage());
+            // Fallback: generate manually
+            $unique_id = 'saflg-' . str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT);
+            log_activity('Public Registration - Fallback unique_id: ' . $unique_id);
+        }
+
+        // Validate unique_id was generated
+        if (empty($unique_id)) {
+            log_activity('Public Registration - CRITICAL: unique_id is EMPTY after generation!');
+            $unique_id = 'saflg-' . time(); // Emergency fallback
+        }
         // Calculate profile completion percentage
         $profile_completion = $this->safelegalsolutions_client_model->calculate_profile_completion($registration_data);
         
@@ -357,6 +398,8 @@ class Safelegalsolutions_client extends ClientsController
             'phone'                      => $registration_data['phone'],
             'address'                    => $registration_data['address'],
             'date_of_birth'              => $registration_data['date_of_birth'],
+            'passport_number'            => isset($registration_data['passport_number']) ? strtoupper($registration_data['passport_number']) : '', // ✅ ADDED
+            'unique_id'                  => $unique_id,
             'item_id'                    => $registration_data['item_id'],
             'payment_status'             => $payment_status,
             'payment_percentage'         => $payment_percentage,
@@ -378,7 +421,36 @@ class Safelegalsolutions_client extends ClientsController
         
         if ($student_id) {
             log_activity('Public Registration: Student created [ID: ' . $student_id . ', Email: ' . $registration_data['email'] . ', Payment: ' . $payment_status . ' (' . $payment_percentage . '%)]');
+             // ============================================================
+            // RECORD PAYMENT TRANSACTION (if amount > 0)
+            // ============================================================
             
+            if ($amount_paid > 0) {
+                $payment_method = $this->input->post('payment_method');
+                if (empty($payment_method)) {
+                    $payment_method = 'cash';
+                }
+                
+                $transaction_reference = $this->input->post('transaction_reference');
+                $payment_notes = $this->input->post('payment_notes');
+                
+                $payment_data = [
+                    'student_id'             => $student_id,
+                    'payment_method'         => $payment_method,
+                    'amount'                 => $amount_paid,
+                    'payment_date'           => date('Y-m-d H:i:s'),
+                    'transaction_reference'  => $transaction_reference,
+                    'payment_notes'          => $payment_notes,
+                    'payment_status'         => 'completed',
+                    'created_by'             => $branch->nodal_partner_manager_id
+                ];
+                
+                $payment_id = $this->safelegalsolutions_client_model->add_payment($payment_data);
+                
+                if ($payment_id) {
+                    log_activity('Public Registration: Payment recorded [Payment ID: ' . $payment_id . ', Student ID: ' . $student_id . ', Amount: ' . $amount_paid . ']');
+                }
+            }
             // ============================================================
             // AUTO-CREATE CLIENT ACCOUNT IF PAYMENT IS 100% COMPLETE
             // ============================================================
@@ -390,8 +462,20 @@ class Safelegalsolutions_client extends ClientsController
             if ($payment_complete) {
                 log_activity('Public Registration: Payment complete (' . $payment_percentage . '%), creating client account [Student ID: ' . $student_id . ']');
                 
+                // ============================================================
+                // CREATE PACKAGE ENROLLMENT
+                // ============================================================
+                
+                $enrollment_id = $this->safelegalsolutions_client_model->create_package_enrollment($student_id, [
+                    'created_by' => $branch->nodal_partner_manager_id
+                ]);
+                
+                if ($enrollment_id) {
+                    log_activity('Public Registration: Package enrollment created [Enrollment ID: ' . $enrollment_id . ', Student ID: ' . $student_id . ']');
+                }
+                
                 // Create client account + send email
-                $client_result = $this->safelegalsolutions_client_model->create_client_account_for_student($student_id);
+                $client_result = $this->safelegalsolutions_client_model->create_client_account_for_student($student_id);    
                 
                 if ($client_result['success']) {
                     log_activity('Public Registration: ✓ Client account created successfully [Student ID: ' . $student_id . ', Client ID: ' . $client_result['client_id'] . ']');

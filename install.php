@@ -152,6 +152,9 @@ try {
         `address` TEXT NULL,
         `date_of_birth` DATE NULL,
         
+        -- Identification Documents
+        `passport_number` VARCHAR(50) NULL COMMENT 'Student passport number',
+        `unique_id` VARCHAR(50) NULL COMMENT 'Auto-generated unique ID (saflegxxx-333)',
         -- Package/Item Selection
         `item_id` INT(11) NULL COMMENT 'Selected package/item',
         
@@ -185,6 +188,8 @@ try {
         PRIMARY KEY (`id`),
         UNIQUE KEY `email` (`email`),
         UNIQUE KEY `referral_code` (`referral_code`),
+        UNIQUE KEY `passport_number` (`passport_number`),
+        UNIQUE KEY `unique_id` (`unique_id`),
         KEY `branch_id` (`branch_id`),
         KEY `nodal_partner_manager_id` (`nodal_partner_manager_id`),
         KEY `item_id` (`item_id`),

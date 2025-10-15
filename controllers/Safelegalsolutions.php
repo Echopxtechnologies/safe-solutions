@@ -865,13 +865,34 @@ private function send_staff_credentials_email($email, $password, $firstname)
         $data['nodal_partner_manager_id'] = $staff_id;
     }
     
-    // Set total_amount from selected package
-    if (empty($data['total_amount']) && !empty($data['item_id'])) {
+  // ============================================================
+    // ENSURE PACKAGE (ITEM) IS PROPERLY SET
+    // ============================================================
+
+    // Validate item_id exists and is active
+    if (!empty($data['item_id'])) {
         $item = $this->safelegalsolutions_model->get_item($data['item_id']);
-        if ($item) {
+        
+        if ($item && $item->is_active == 1) {
+            // Set total_amount from package price
             $data['total_amount'] = $item->total_price;
+            
+            log_activity('Package selected [Item ID: ' . $data['item_id'] . ', Package: ' . $item->item_name . ', Price: ' . $item->total_price . ']');
+        } else {
+            // Invalid or inactive package
+            set_alert('danger', 'Selected package is not available. Please select a valid package.');
+            redirect(admin_url('safelegalsolutions/student'));
+            return;
         }
+    } else {
+        // No package selected - this is required
+        set_alert('danger', 'Please select a package before saving the candidate.');
+        redirect(admin_url('safelegalsolutions/student'));
+        return;
     }
+
+    // Debug log to verify data before insert
+    log_activity('Student data before insert - item_id: ' . (isset($data['item_id']) ? $data['item_id'] : 'NULL') . ', total_amount: ' . (isset($data['total_amount']) ? $data['total_amount'] : '0.00'));
     
     // Calculate payment percentage
     $amount_paid = isset($data['amount_paid']) ? floatval($data['amount_paid']) : 0;
@@ -884,6 +905,13 @@ private function send_staff_credentials_email($email, $password, $firstname)
     }
     
     $data['referral_code'] = $this->safelegalsolutions_model->generate_referral_code();
+        // Generate unique_id if passport_number is provided
+    if (!empty($data['passport_number'])) {
+        $data['unique_id'] = $this->safelegalsolutions_model->generate_unique_id($data['passport_number']);
+    } else {
+        // Generate unique_id even without passport
+        $data['unique_id'] = $this->safelegalsolutions_model->generate_unique_id();
+    }
     
     // ============================================================
     // STEP 3: INSERT STUDENT (with clean data)
@@ -980,7 +1008,15 @@ private function send_staff_credentials_email($email, $password, $firstname)
             $data['payment_percentage'] = ($amount_paid / $total_amount) * 100;
         }
     }
-    
+    // Regenerate unique_id if passport_number changed
+    if (isset($data['passport_number']) && !empty($data['passport_number'])) {
+        $old_student = $this->safelegalsolutions_model->get_student($id);
+        
+        // Only regenerate if passport changed or unique_id doesn't exist
+        if (empty($old_student->unique_id) || $data['passport_number'] != $old_student->passport_number) {
+            $data['unique_id'] = $this->safelegalsolutions_model->generate_unique_id($data['passport_number']);
+        }
+    }
     // Update student record
     $success = $this->safelegalsolutions_model->update_student($id, $data);
     

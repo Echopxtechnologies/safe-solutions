@@ -505,6 +505,26 @@
                                            value="<?php echo isset($form_data['date_of_birth']) ? $form_data['date_of_birth'] : ''; ?>">
                                     <small class="text-muted">You must be at least 18 years old</small>
                                 </div>
+                                  <!-- Passport Number Row -->
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="passport_number">
+                                        <span class="text-danger">*</span> Passport Number
+                                    </label>
+                                    <input type="text" 
+                                           name="passport_number" 
+                                           id="passport_number" 
+                                           class="form-control" 
+                                           required
+                                           placeholder="Enter your passport number"
+                                           pattern="[A-Z0-9]+"
+                                           style="text-transform: uppercase;"
+                                           value="<?php echo isset($form_data['passport_number']) ? htmlspecialchars($form_data['passport_number']) : ''; ?>">
+                                    <small class="text-muted">Valid passport number (letters and numbers only, minimum 6 characters)</small>
+                                </div>
+                            </div>
+                        </div>
                             </div>
                         </div>
                     </div>
@@ -707,7 +727,20 @@ $(document).ready(function() {
             $('#phone').focus();
             return false;
         }
-        
+        // Passport validation
+        var passport = $('#passport_number').val();
+        if (!passport || passport.trim() === '') {
+            e.preventDefault();
+            alert('Please enter your passport number');
+            $('#passport_number').focus();
+            return false;
+        }
+        if (passport.length < 6) {
+            e.preventDefault();
+            alert('Please enter a valid passport number (minimum 6 characters)');
+            $('#passport_number').focus();
+            return false;
+        }
         // Age validation
         var dob = new Date($('#date_of_birth').val());
         var today = new Date();
@@ -727,6 +760,11 @@ $(document).ready(function() {
         return true;
     });
 });
+
+// Auto-uppercase passport number
+    $('#passport_number').on('input', function() {
+        this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    });
 </script>
 
 </body>

@@ -631,6 +631,7 @@ public function update_student($id, $data)
             'phone',
             'address',
             'date_of_birth',
+            'passport_number',
 
         ];
         
@@ -1592,5 +1593,24 @@ public function get_expiring_enrollments($days = 30)
     return $this->db->get()->result();
 }
 
+//passport adn unique id 
+/**
+ * Generate unique ID based on passport number
+ * Format: saflg-XXXXX (5 random digits)
+ * @param string $passport_number Passport number
+ * @return string Generated unique ID
+ */
+public function generate_unique_id($passport_number = '')
+{
+    do {
+        // Generate 5 random digits
+        $random_digits = str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT);
+        $unique_id = 'saflg-' . $random_digits;
+        
+        // Check if exists
+        $exists = $this->db->get_where($this->table_students, ['unique_id' => $unique_id])->row();
+    } while ($exists);
     
+    return $unique_id;
+}
 }

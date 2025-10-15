@@ -267,6 +267,10 @@
                 <span class="info-label">Address:</span>
                 <span class="info-value"><?php echo htmlspecialchars($registration_data['address']); ?></span>
             </div>
+             <div class="info-row">
+                <span class="info-label">Passport Number:</span>
+                <span class="info-value"><?php echo htmlspecialchars($registration_data['passport_number']); ?></span>
+            </div>
         </div>
         
         <!-- Package Information -->
@@ -374,6 +378,46 @@
                                 </div>
                             </div>
                         </label>
+                    </div>
+                </div>
+            </div>
+                
+                <!-- Payment Method Selection -->
+                <div style="margin-top: 25px; padding: 20px; background: white; border-radius: 8px; border: 1px solid #ddd;">
+                    <h5 style="margin-top: 0; color: #1a1a1a;">
+                        <i class="fa fa-credit-card"></i> Payment Method
+                    </h5>
+                    
+                    <div class="form-group">
+                        <label>Select Payment Method:</label>
+                        <select name="payment_method" id="payment_method" class="form-control" style="padding: 10px;">
+                            <option value="cash">Cash</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="upi">UPI</option>
+                            <option value="card">Debit/Credit Card</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Transaction Reference (Optional):</label>
+                        <input type="text" 
+                               name="transaction_reference" 
+                               id="transaction_reference"
+                               class="form-control"
+                               style="padding: 10px;"
+                               placeholder="Enter UTR/Ref Number (if applicable)">
+                        <small style="color: #666;">For online payments, enter transaction ID or reference number</small>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Payment Notes (Optional):</label>
+                        <textarea name="payment_notes" 
+                                  id="payment_notes"
+                                  class="form-control"
+                                  rows="2"
+                                  style="padding: 10px;"
+                                  placeholder="Add any payment-related notes"></textarea>
                     </div>
                 </div>
             </div>

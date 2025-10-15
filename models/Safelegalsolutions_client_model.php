@@ -187,7 +187,37 @@ class Safelegalsolutions_client_model extends App_Model
         // Fallback: use timestamp-based code
         return 'SLS-' . strtoupper(substr(md5(time() . mt_rand()), 0, 6));
     }
-
+/**
+     * Generate unique ID based on passport number
+     * Format: saflg-XXXXX (5 random digits)
+     * 
+     * @param string $passport_number Passport number (optional)
+     * @return string Generated unique ID
+     */
+    public function generate_unique_id($passport_number = '')
+    {
+        $max_attempts = 10;
+        $attempts = 0;
+        
+        do {
+            // Generate 5 random digits
+            $random_digits = str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT);
+            $unique_id = 'saflg-' . $random_digits;
+            
+            // Check if exists
+            $this->db->where('unique_id', $unique_id);
+            $existing = $this->db->get($this->table_students)->row();
+            
+            if (!$existing) {
+                return $unique_id;
+            }
+            
+            $attempts++;
+        } while ($attempts < $max_attempts);
+        
+        // Fallback: use timestamp-based unique ID
+        return 'saflg-' . strtoupper(substr(md5(time() . mt_rand()), 0, 5));
+    }
     /**
      * Calculate profile completion percentage
      * Based on required fields being filled
@@ -204,7 +234,7 @@ class Safelegalsolutions_client_model extends App_Model
             'phone',
             'address',
             'date_of_birth',
-            'course_applied'
+            'passport_number'
         ];
         
         $filled_count = 0;
@@ -319,7 +349,101 @@ class Safelegalsolutions_client_model extends App_Model
         
         return $this->db->affected_rows() > 0;
     }
-
+/**
+     * Add payment transaction
+     * 
+     * @param array $data Payment data
+     * @return int|bool Payment ID or false
+     */
+    public function add_payment($data)
+    {
+        // Generate unique payment ID if not provided
+        if (empty($data['payment_id'])) {
+            $data['payment_id'] = 'PAY-' . date('Ymd') . '-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        }
+        
+        $this->db->insert('tblsls_payments', $data);
+        $insert_id = $this->db->insert_id();
+        
+        if ($insert_id) {
+            log_activity('Payment Recorded [ID: ' . $insert_id . ', Student ID: ' . $data['student_id'] . ', Amount: ' . $data['amount'] . ']');
+            return $insert_id;
+        }
+        
+        return false;
+    }
+    /**
+     * Create package enrollment when payment is complete
+     * 
+     * @param int $student_id Student ID
+     * @param array $enrollment_data Optional enrollment data
+     * @return int|bool Enrollment ID or false
+     */
+    public function create_package_enrollment($student_id, $enrollment_data = [])
+    {
+        // Get student details
+        $student = $this->get_student($student_id);
+        
+        if (!$student || empty($student->item_id)) {
+            return false;
+        }
+        
+        // Get package/item details
+        $item = $this->get_item($student->item_id);
+        
+        if (!$item) {
+            return false;
+        }
+        
+        // Check if enrollment already exists
+        $this->db->where('student_id', $student_id);
+        $existing = $this->db->get('tblsls_package_enrollments')->row();
+        
+        if ($existing) {
+            log_activity('Enrollment already exists for Student ID: ' . $student_id);
+            return $existing->id;
+        }
+        
+        // Calculate dates
+        $enrollment_date = isset($enrollment_data['enrollment_date']) ? $enrollment_data['enrollment_date'] : date('Y-m-d');
+        $start_date = isset($enrollment_data['start_date']) ? $enrollment_data['start_date'] : date('Y-m-d');
+        
+        // Calculate end_date = start_date + duration_months
+        $end_date = date('Y-m-d', strtotime($start_date . ' + ' . $item->duration_months . ' months'));
+        
+        // Prepare enrollment data
+        $data = [
+            'student_id'            => $student_id,
+            'item_id'               => $student->item_id,
+            'enrollment_date'       => $enrollment_date,
+            'start_date'            => $start_date,
+            'end_date'              => $end_date,
+            'duration_months'       => $item->duration_months,
+            'total_amount'          => $item->total_price,
+            'amount_paid'           => isset($student->amount_paid) ? $student->amount_paid : 0.00,
+            'payment_status'        => isset($student->payment_status) ? $student->payment_status : 'unpaid',
+            'enrollment_status'     => 'active',
+            'completion_percentage' => 0.00,
+            'notes'                 => 'Auto-created enrollment for package: ' . $item->item_name,
+            'created_by'            => isset($enrollment_data['created_by']) ? $enrollment_data['created_by'] : $student->created_by,
+            'created_at'            => date('Y-m-d H:i:s')
+        ];
+        
+        // Merge with any additional enrollment data
+        if (!empty($enrollment_data)) {
+            $data = array_merge($data, $enrollment_data);
+        }
+        
+        $this->db->insert('tblsls_package_enrollments', $data);
+        $insert_id = $this->db->insert_id();
+        
+        if ($insert_id) {
+            log_activity('Package Enrollment Created [ID: ' . $insert_id . ', Student ID: ' . $student_id . ', Package: ' . $item->item_name . ', Duration: ' . $item->duration_months . ' months, End Date: ' . $end_date . ']');
+            return $insert_id;
+        }
+        
+        return false;
+    }
     /**
      * Check if referral code exists
      * 
