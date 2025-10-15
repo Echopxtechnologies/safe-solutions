@@ -556,12 +556,23 @@ public function branch($id = '')
             show_404();
         }
     }
-
-    // Get categories (exclude "Safe Legal Solutions")
+    // Get all categories
     $all_categories = $this->safelegalsolutions_model->get_all_categories();
-    $data['categories'] = array_filter($all_categories, function($cat) {
-        return $cat->name !== 'Safe Legal Solutions';
-    });
+
+    // Check if user is NPM (Nodal Partner Manager)
+    $is_npm = has_permission('safelegalsolutions_students', '', 'view') 
+            && !has_permission('customers', '', 'view') 
+            && !is_sls_manager_or_admin();
+
+    // NPM: exclude "Safe Legal Solutions" category
+    // Admin/Manager: show all categories including "Safe Legal Solutions"
+    if ($is_npm) {
+        $data['categories'] = array_filter($all_categories, function($cat) {
+            return $cat->name !== 'Safe Legal Solutions';
+        });
+    } else {
+        $data['categories'] = $all_categories;
+    }
     
     $data['staff_members'] = $this->staff_model->get('', ['active' => 1, 'admin !=' => 1]);
     $data['title'] = $id == '' ? 'Add Branch' : 'Edit Branch';
@@ -797,70 +808,246 @@ private function send_staff_credentials_email($email, $password, $firstname)
             }
             
             if ($id == '') {
-                $data['created_by'] = $staff_id;
+    // ============================================================
+    // STEP 1: SEPARATE PAYMENT DATA FROM STUDENT DATA
+    // ============================================================
+    
+    // Extract payment fields (for payments table)
+    $payment_method = isset($data['payment_method']) ? $data['payment_method'] : 'cash';
+    $transaction_reference = isset($data['transaction_reference']) ? $data['transaction_reference'] : '';
+    $payment_date = isset($data['payment_date']) ? $data['payment_date'] : date('Y-m-d H:i:s');
+    $payment_notes = isset($data['payment_notes']) ? $data['payment_notes'] : '';
+    
+    // Remove payment fields from student data
+    unset($data['payment_method']);
+    unset($data['transaction_reference']);
+    unset($data['payment_date']);
+    unset($data['payment_notes']);
+    
+    // ============================================================
+    // STEP 2: PREPARE STUDENT DATA
+    // ============================================================
+    
+    $data['created_by'] = $staff_id;
+    
+    if (is_sls_manager_or_admin()) {
+        if (!isset($data['branch_id']) || empty($data['branch_id'])) {
+            $default_branch = $this->safelegalsolutions_model->get_default_branch();
+            
+            if ($default_branch) {
+                $data['branch_id'] = $default_branch->id;
+                $data['nodal_partner_manager_id'] = $default_branch->nodal_partner_manager_id;
+            } else {
+                set_alert('danger', 'No default branch found. Please create a default branch first.');
+                redirect(admin_url('safelegalsolutions/student'));
+                return;
+            }
+        } else {
+            $branch = $this->safelegalsolutions_model->get_branch($data['branch_id']);
+            if ($branch && $branch->nodal_partner_manager_id) {
+                $data['nodal_partner_manager_id'] = $branch->nodal_partner_manager_id;
+            } else {
+                set_alert('danger', 'Selected branch has no manager assigned');
+                redirect(admin_url('safelegalsolutions/student'));
+                return;
+            }
+        }
+    } else {
+        $manager_branch = $this->safelegalsolutions_model->get_branch_by_manager($staff_id);
+        
+        if (!$manager_branch) {
+            set_alert('danger', 'You do not have a branch assigned. Please contact administrator.');
+            redirect(admin_url('safelegalsolutions/students'));
+            return;
+        }
+        
+        $data['branch_id'] = $manager_branch->id;
+        $data['nodal_partner_manager_id'] = $staff_id;
+    }
+    
+    // Set total_amount from selected package
+    if (empty($data['total_amount']) && !empty($data['item_id'])) {
+        $item = $this->safelegalsolutions_model->get_item($data['item_id']);
+        if ($item) {
+            $data['total_amount'] = $item->total_price;
+        }
+    }
+    
+    // Calculate payment percentage
+    $amount_paid = isset($data['amount_paid']) ? floatval($data['amount_paid']) : 0;
+    $total_amount = isset($data['total_amount']) ? floatval($data['total_amount']) : 0;
+    
+    if ($total_amount > 0) {
+        $data['payment_percentage'] = ($amount_paid / $total_amount) * 100;
+    } else {
+        $data['payment_percentage'] = 0;
+    }
+    
+    $data['referral_code'] = $this->safelegalsolutions_model->generate_referral_code();
+    
+    // ============================================================
+    // STEP 3: INSERT STUDENT (with clean data)
+    // ============================================================
+    
+    $insert_id = $this->safelegalsolutions_model->add_student($data);
+    
+    if ($insert_id) {
+        log_activity('Student Created [ID: ' . $insert_id . ', Name: ' . $data['student_name'] . ']');
+        
+        // ============================================================
+        // STEP 4: CREATE PAYMENT RECORD (if amount > 0)
+        // ============================================================
+        
+        if ($amount_paid > 0) {
+            $payment_data = [
+                'student_id' => $insert_id,
+                'payment_method' => $payment_method,
+                'amount' => $amount_paid,
+                'payment_date' => $payment_date,
+                'transaction_reference' => $transaction_reference,
+                'payment_notes' => $payment_notes,
+                'payment_status' => 'completed',
+                'created_by' => $staff_id
+            ];
+            
+            $payment_id = $this->safelegalsolutions_model->add_payment($payment_data);
+            
+            if ($payment_id) {
+                log_activity('Payment Recorded [Student ID: ' . $insert_id . ', Amount: ' . $amount_paid . ']');
+            }
+        }
+        
+        // ============================================================
+        // STEP 5: CREATE ENROLLMENT & CLIENT ACCOUNT (if payment complete)
+        // ============================================================
+        
+        $payment_complete = $this->safelegalsolutions_model->is_payment_complete($insert_id);
+        
+        if ($payment_complete) {
+            // Create package enrollment
+            $enrollment_id = $this->safelegalsolutions_model->create_package_enrollment($insert_id, [
+                'created_by' => $staff_id
+            ]);
+            
+            if ($enrollment_id) {
+                log_activity('Package Enrollment Created [Student ID: ' . $insert_id . ', Enrollment ID: ' . $enrollment_id . ']');
+            }
+            
+            // Create client account
+            $client_result = $this->safelegalsolutions_model->create_client_account_for_student($insert_id);
+            
+            if ($client_result['success']) {
+                set_alert('success', 'Candidate added successfully! Client portal account created and credentials sent to ' . $data['email']);
+            } else {
+                set_alert('warning', 'Candidate added but client account creation failed: ' . $client_result['message']);
+            }
+        } else {
+            set_alert('success', 'Candidate added successfully');
+        }
+        
+        redirect(admin_url('safelegalsolutions/students'));
+    } else {
+        set_alert('danger', 'Error adding candidate');
+    }
+        } else {
+    // ============================================================
+    // UPDATE EXISTING STUDENT
+    // ============================================================
+    
+    $old_student = $this->safelegalsolutions_model->get_student($id);
+    $old_payment_complete = $this->safelegalsolutions_model->is_payment_complete($id);
+    
+    // Extract payment fields before updating student
+    $payment_method = isset($data['payment_method']) ? $data['payment_method'] : 'cash';
+    $transaction_reference = isset($data['transaction_reference']) ? $data['transaction_reference'] : '';
+    $payment_date = isset($data['payment_date']) ? $data['payment_date'] : date('Y-m-d H:i:s');
+    $payment_notes = isset($data['payment_notes']) ? $data['payment_notes'] : '';
+    
+    // Get amount before removing fields
+    $amount_paid = isset($data['amount_paid']) ? floatval($data['amount_paid']) : 0;
+    $old_amount = floatval($old_student->amount_paid);
+    
+    // Remove payment fields from student update
+    unset($data['payment_method']);
+    unset($data['transaction_reference']);
+    unset($data['payment_date']);
+    unset($data['payment_notes']);
+    
+    // Calculate payment percentage
+    if (isset($data['amount_paid']) && isset($data['total_amount'])) {
+        $total_amount = floatval($data['total_amount']);
+        if ($total_amount > 0) {
+            $data['payment_percentage'] = ($amount_paid / $total_amount) * 100;
+        }
+    }
+    
+    // Update student record
+    $success = $this->safelegalsolutions_model->update_student($id, $data);
+    
+    if ($success) {
+        // ============================================================
+        // CREATE PAYMENT RECORD (if new payment added)
+        // ============================================================
+        
+        if ($amount_paid > $old_amount) {
+            $new_payment_amount = $amount_paid - $old_amount;
+            
+            $payment_data = [
+                'student_id' => $id,
+                'payment_method' => $payment_method,
+                'amount' => $new_payment_amount,
+                'payment_date' => $payment_date,
+                'transaction_reference' => $transaction_reference,
+                'payment_notes' => $payment_notes,
+                'payment_status' => 'completed',
+                'created_by' => get_staff_user_id()
+            ];
+            
+            $payment_id = $this->safelegalsolutions_model->add_payment($payment_data);
+            
+            if ($payment_id) {
+                log_activity('Additional Payment Recorded [Student ID: ' . $id . ', Amount: ' . $new_payment_amount . ']');
+            }
+        }
+        
+        // ============================================================
+        // CHECK IF PAYMENT JUST BECAME COMPLETE
+        // ============================================================
+        
+        $new_payment_complete = $this->safelegalsolutions_model->is_payment_complete($id);
+        
+        if (!$old_payment_complete && $new_payment_complete) {
+            // Create enrollment
+            $enrollment_id = $this->safelegalsolutions_model->create_package_enrollment($id, [
+                'created_by' => get_staff_user_id()
+            ]);
+            
+            if ($enrollment_id) {
+                log_activity('Package Enrollment Created [Student ID: ' . $id . ', Enrollment ID: ' . $enrollment_id . ']');
+            }
+            
+            // Create client account if not exists
+            if (empty($old_student->client_id)) {
+                $client_result = $this->safelegalsolutions_model->create_client_account_for_student($id);
                 
-                if (is_sls_manager_or_admin()) {
-                    if (!isset($data['branch_id']) || empty($data['branch_id'])) {
-                        $default_branch = $this->safelegalsolutions_model->get_default_branch();
-                        
-                        if ($default_branch) {
-                            $data['branch_id'] = $default_branch->id;
-                            $data['nodal_partner_manager_id'] = $default_branch->nodal_partner_manager_id;
-                        } else {
-                            set_alert('danger', 'No default branch found. Please create a default branch first.');
-                            redirect(admin_url('safelegalsolutions/student'));
-                            return;
-                        }
-                    } else {
-                        $branch = $this->safelegalsolutions_model->get_branch($data['branch_id']);
-                        if ($branch && $branch->nodal_partner_manager_id) {
-                            $data['nodal_partner_manager_id'] = $branch->nodal_partner_manager_id;
-                        } else {
-                            set_alert('danger', 'Selected branch has no manager assigned');
-                            redirect(admin_url('safelegalsolutions/student'));
-                            return;
-                        }
-                    }
+                if ($client_result['success']) {
+                    set_alert('success', 'Payment completed! Client portal account created and credentials sent to ' . $old_student->email);
                 } else {
-                    $manager_branch = $this->safelegalsolutions_model->get_branch_by_manager($staff_id);
-                    
-                    if (!$manager_branch) {
-                        set_alert('danger', 'You do not have a branch assigned. Please contact administrator.');
-                        redirect(admin_url('safelegalsolutions/students'));
-                        return;
-                    }
-                    
-                    $data['branch_id'] = $manager_branch->id;
-                    $data['nodal_partner_manager_id'] = $staff_id;
-                }
-                
-                $data['referral_code'] = $this->safelegalsolutions_model->generate_referral_code();
-                
-                $insert_id = $this->safelegalsolutions_model->add_student($data);
-                
-                if ($insert_id) {
-                    set_alert('success', 'Candidate added successfully');
-                    
-                    if ($this->safelegalsolutions_model->is_payment_complete($insert_id)) {
-                        $client_result = $this->safelegalsolutions_model->create_client_account_for_student($insert_id);
-                        
-                        if ($client_result['success']) {
-                            set_alert('success', 'Client portal account created and credentials sent to ' . $data['email']);
-                        } else {
-                            set_alert('warning', 'Candidate added but client account creation failed: ' . $client_result['message']);
-                        }
-                    }
-                    
-                    redirect(admin_url('safelegalsolutions/students'));
-                } else {
-                    set_alert('danger', 'Error adding candidate');
+                    set_alert('warning', 'Payment completed but client account creation failed: ' . $client_result['message']);
                 }
             } else {
-                $old_student = $this->safelegalsolutions_model->get_student($id);
-                $old_payment_complete = $this->safelegalsolutions_model->is_payment_complete($id);
-                
-                $success = $this->safelegalsolutions_model->update_student($id, $data);
-                
+                set_alert('success', 'Candidate updated successfully. Payment is now complete!');
+            }
+        } else {
+            set_alert('success', 'Candidate updated successfully');
+        }
+        
+        redirect(admin_url('safelegalsolutions/students'));
+    } else {
+        set_alert('danger', 'Error updating candidate');
+        redirect(admin_url('safelegalsolutions/student/' . $id));
+    }
+       
                 if ($success) {
                     set_alert('success', 'Candidate updated successfully');
                     

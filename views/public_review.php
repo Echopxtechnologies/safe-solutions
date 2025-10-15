@@ -4,197 +4,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($title) ? $title : 'Candidate Registration Review'; ?> - Safe Legal Solutions</title>
-    
-    <!-- Bootstrap & FontAwesome -->
+    <title>Review & Payment - Safe Legal Solutions</title>
     <link href="<?php echo base_url('assets/css/bootstrap.min.css'); ?>" rel="stylesheet">
     <link href="<?php echo base_url('assets/plugins/font-awesome/css/font-awesome.min.css'); ?>" rel="stylesheet">
     
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
-            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             padding: 30px 15px;
-            line-height: 1.6;
-        }
-        
-        .review-wrapper {
-            max-width: 900px;
-            margin: 0 auto;
         }
         
         .review-container {
+            max-width: 900px;
+            margin: 0 auto;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
             overflow: hidden;
         }
         
-        /* Header */
         .review-header {
             background: #1a1a1a;
             color: white;
             padding: 30px;
             text-align: center;
-            border-bottom: 4px solid #d4af37;
         }
         
         .review-header h1 {
-            margin: 0 0 10px 0;
-            font-size: 28px;
-            font-weight: 600;
-        }
-        
-        .review-header h1 i {
-            color: #d4af37;
-            margin-right: 10px;
-        }
-        
-        .review-header p {
             margin: 0;
-            opacity: 0.9;
-            font-size: 15px;
+            font-size: 28px;
         }
         
-        /* Body */
         .review-body {
             padding: 40px;
         }
         
-        /* Error Message */
-        .error-message {
-            background: #fff3cd;
-            color: #856404;
-            padding: 15px 20px;
-            border-radius: 4px;
-            margin-bottom: 25px;
-            border-left: 4px solid #ffc107;
-        }
-        
-        .error-message i {
-            margin-right: 8px;
-        }
-        
-        /* Review Sections */
-        .review-section {
-            margin-bottom: 25px;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            overflow: hidden;
-        }
-        
-        .review-section-header {
+        .section-title {
             background: #f8f9fa;
             padding: 15px 20px;
-            border-bottom: 2px solid #e0e0e0;
+            margin: -40px -40px 30px -40px;
+            border-bottom: 3px solid #1a1a1a;
         }
         
-        .review-section-header h4 {
+        .section-title h3 {
             margin: 0;
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 20px;
             color: #1a1a1a;
         }
         
-        .review-section-header i {
-            margin-right: 10px;
-            color: #d4af37;
+        .info-group {
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 25px;
         }
         
-        .review-section-body {
-            padding: 20px;
-            background: white;
+        .info-group h4 {
+            color: #1a1a1a;
+            margin-bottom: 20px;
+            font-size: 18px;
+            border-bottom: 2px solid #d4af37;
+            padding-bottom: 10px;
         }
         
-        .review-item {
+        .info-row {
             display: flex;
             justify-content: space-between;
             padding: 12px 0;
             border-bottom: 1px solid #f0f0f0;
         }
         
-        .review-item:last-child {
+        .info-row:last-child {
             border-bottom: none;
         }
         
-        .review-label {
-            font-weight: 500;
+        .info-label {
             color: #666;
-            flex: 0 0 180px;
-        }
-        
-        .review-value {
-            flex: 1;
-            color: #1a1a1a;
             font-weight: 500;
-            text-align: right;
         }
         
-        /* Package Info Card */
-        .package-info-card {
-            background: linear-gradient(135deg, #1a1a1a 0%, #333 100%);
-            color: white;
-            padding: 25px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+        .info-value {
+            color: #1a1a1a;
+            font-weight: 600;
         }
         
-        .package-name {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #d4af37;
-        }
-        
-        .package-duration {
-            font-size: 14px;
-            opacity: 0.8;
-            margin-bottom: 15px;
-        }
-        
-        .package-features {
-            margin: 15px 0 0 0;
-        }
-        
-        .package-features ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            columns: 2;
-            column-gap: 20px;
-        }
-        
-        .package-features li {
-            padding: 6px 0;
-            font-size: 14px;
-            break-inside: avoid;
-        }
-        
-        .package-features li i {
-            color: #d4af37;
-            margin-right: 8px;
-        }
-        
-        /* Price Summary */
         .price-summary {
             background: #f8f9fa;
-            padding: 25px;
-            border-radius: 6px;
-            border: 2px solid #e0e0e0;
+            padding: 20px;
+            border-radius: 8px;
             margin-top: 20px;
-        }
-        
-        .price-summary h4 {
-            margin: 0 0 15px 0;
-            font-size: 18px;
-            color: #1a1a1a;
         }
         
         .price-row {
@@ -204,63 +104,103 @@
             font-size: 16px;
         }
         
-        .price-label {
-            color: #666;
-        }
-        
-        .price-value {
-            font-weight: 600;
-            color: #1a1a1a;
-        }
-        
-        .price-row.subtotal {
-            border-top: 1px solid #ddd;
-            margin-top: 5px;
-            padding-top: 15px;
-        }
-        
         .price-row.total {
             border-top: 2px solid #1a1a1a;
             margin-top: 10px;
             padding-top: 15px;
-            font-size: 22px;
+            font-size: 24px;
             font-weight: bold;
+            color: #1a1a1a;
         }
         
-        .price-row.total .price-value {
-            color: #28a745;
-            font-size: 26px;
+        /* Payment Section - NEW */
+        .payment-section {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 30px;
+            margin: 30px 0;
         }
         
-        /* Payment Button */
-        .btn-payment {
-            background: #28a745;
+        .payment-section h4 {
+            color: #856404;
+            margin-bottom: 20px;
+        }
+        
+        .payment-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .payment-option {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .payment-option:hover {
+            border-color: #1a1a1a;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .payment-option input[type="radio"] {
+            margin-right: 15px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .payment-option label {
+            cursor: pointer;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .payment-option.selected {
+            border-color: #1a1a1a;
+            background: #f8f9fa;
+        }
+        
+        .payment-amount-input {
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .payment-amount-input.active {
+            display: block;
+        }
+        
+        .payment-amount-input input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .btn-submit {
+            background: #1a1a1a;
             color: white;
-            padding: 18px 50px;
-            font-size: 20px;
-            font-weight: 600;
+            padding: 16px 40px;
+            font-size: 18px;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             width: 100%;
+            margin-top: 30px;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-            margin-top: 25px;
         }
         
-        .btn-payment:hover {
-            background: #218838;
+        .btn-submit:hover {
+            background: #000;
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
-            color: white;
-        }
-        
-        .btn-payment:active {
-            transform: translateY(0);
-        }
-        
-        .btn-payment i {
-            margin-right: 10px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
         }
         
         .btn-back {
@@ -269,283 +209,251 @@
             padding: 12px 30px;
             font-size: 16px;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             width: 100%;
             margin-top: 15px;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
         }
         
-        .btn-back:hover {
-            background: #5a6268;
-            color: white;
-            text-decoration: none;
-        }
-        
-        .btn-back i {
-            margin-right: 8px;
-        }
-        
-        /* Security Note */
-        .security-note {
-            text-align: center;
-            margin-top: 25px;
-            padding: 15px;
-            background: #e8f5e9;
-            border-radius: 4px;
-        }
-        
-        .security-note i {
-            color: #28a745;
-            margin-right: 8px;
-        }
-        
-        .security-note small {
-            color: #666;
-            font-size: 14px;
-        }
-        
-        /* Payment Info Banner */
-        .payment-info {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
             padding: 15px 20px;
-            margin-bottom: 25px;
-            border-radius: 4px;
-        }
-        
-        .payment-info i {
-            color: #856404;
-            margin-right: 8px;
-        }
-        
-        .payment-info strong {
-            color: #856404;
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .review-body {
-                padding: 25px 20px;
-            }
-            
-            .review-header {
-                padding: 25px 20px;
-            }
-            
-            .review-header h1 {
-                font-size: 24px;
-            }
-            
-            .review-label {
-                flex: 0 0 120px;
-                font-size: 14px;
-            }
-            
-            .review-value {
-                font-size: 14px;
-            }
-            
-            .package-name {
-                font-size: 20px;
-            }
-            
-            .package-features ul {
-                columns: 1;
-            }
-            
-            .price-row {
-                font-size: 14px;
-            }
-            
-            .price-row.total {
-                font-size: 18px;
-            }
-            
-            .price-row.total .price-value {
-                font-size: 22px;
-            }
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #17a2b8;
         }
     </style>
 </head>
 <body>
 
-<div class="review-wrapper">
-    <div class="review-container">
-        <!-- Header -->
-        <div class="review-header">
-            <h1><i class="fa fa-file-text-o"></i> Review Candidate Details</h1>
-            <p>Please verify your information before completing registration</p>
+<div class="review-container">
+    <div class="review-header">
+        <h1><i class="fa fa-check-circle"></i> Review & Complete Registration</h1>
+        <p>Please review your information and complete payment</p>
+    </div>
+    
+    <div class="review-body">
+        <div class="section-title">
+            <h3>Registration Summary</h3>
         </div>
         
-        <!-- Body -->
-        <div class="review-body">
-            <!-- Error Message -->
-            <?php if (isset($error)): ?>
-                <div class="error-message">
-                    <i class="fa fa-exclamation-triangle"></i> 
-                    <strong>Error:</strong> <?php echo $error; ?>
-                </div>
-            <?php endif; ?>
-            
-            <!-- Payment Info Banner -->
-            <div class="payment-info">
-                <i class="fa fa-info-circle"></i> 
-                <strong>Note:</strong> Payment gateway integration is currently in progress. For now, clicking "Complete Registration" will register your application without actual payment processing.
+        <?php if (isset($error)): ?>
+            <div class="alert alert-danger">
+                <i class="fa fa-exclamation-triangle"></i> <?php echo $error; ?>
             </div>
-            
-            <!-- Personal Information -->
-            <div class="review-section">
-                <div class="review-section-header">
-                    <h4><i class="fa fa-user"></i> Personal Information</h4>
-                </div>
-                <div class="review-section-body">
-                    <div class="review-item">
-                        <div class="review-label">Full Name:</div>
-                        <div class="review-value"><?php echo htmlspecialchars($registration_data['student_name']); ?></div>
-                    </div>
-                    <div class="review-item">
-                        <div class="review-label">Date of Birth:</div>
-                        <div class="review-value"><?php echo date('d M Y', strtotime($registration_data['date_of_birth'])); ?></div>
-                    </div>
-                </div>
+        <?php endif; ?>
+        
+        <!-- Personal Information -->
+        <div class="info-group">
+            <h4><i class="fa fa-user"></i> Personal Information</h4>
+            <div class="info-row">
+                <span class="info-label">Full Name:</span>
+                <span class="info-value"><?php echo htmlspecialchars($registration_data['student_name']); ?></span>
             </div>
-            
-            <!-- Contact Information -->
-            <div class="review-section">
-                <div class="review-section-header">
-                    <h4><i class="fa fa-phone"></i> Contact Information</h4>
-                </div>
-                <div class="review-section-body">
-                    <div class="review-item">
-                        <div class="review-label">Email:</div>
-                        <div class="review-value"><?php echo htmlspecialchars($registration_data['email']); ?></div>
-                    </div>
-                    <div class="review-item">
-                        <div class="review-label">Phone:</div>
-                        <div class="review-value"><?php echo htmlspecialchars($registration_data['phone']); ?></div>
-                    </div>
-                    <div class="review-item">
-                        <div class="review-label">Address:</div>
-                        <div class="review-value"><?php echo htmlspecialchars($registration_data['address']); ?></div>
-                    </div>
-                </div>
+            <div class="info-row">
+                <span class="info-label">Date of Birth:</span>
+                <span class="info-value"><?php echo date('F d, Y', strtotime($registration_data['date_of_birth'])); ?></span>
             </div>
-            
-         
-            
-            <!-- Selected Package -->
-            <div class="review-section">
-                <div class="review-section-header">
-                    <h4><i class="fa fa-shopping-cart"></i> Selected Package</h4>
-                </div>
-                <div class="review-section-body">
-                    <div class="package-info-card">
-                        <div class="package-name"><?php echo htmlspecialchars($item->item_name); ?></div>
-                        <?php if (!empty($item->duration_months)): ?>
-                            <div class="package-duration">
-                                <i class="fa fa-clock-o"></i> Duration: <?php echo $item->duration_months; ?> months
-                            </div>
-                        <?php endif; ?>
-                        
-                        <?php if (!empty($item->description)): ?>
-                            <p style="margin: 10px 0; opacity: 0.9;"><?php echo htmlspecialchars($item->description); ?></p>
-                        <?php endif; ?>
-                        
-                        <?php if (!empty($item->features)): ?>
-                            <?php $features = json_decode($item->features, true); ?>
-                            <?php if (!empty($features)): ?>
-                                <div class="package-features">
-                                    <ul>
-                                        <?php foreach ($features as $feature): ?>
-                                            <li>
-                                                <i class="fa fa-check-circle"></i> 
-                                                <?php echo htmlspecialchars($feature); ?>
-                                            </li>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                </div>
-                            <?php endif; ?>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <!-- Price Summary -->
-                    <div class="price-summary">
-                        <h4><i class="fa fa-calculator"></i> Price Breakdown</h4>
-                        
-                        <div class="price-row">
-                            <div class="price-label">Package Base Price:</div>
-                            <div class="price-value">₹<?php echo number_format($item->base_price, 2); ?></div>
-                        </div>
-                        
-                        <div class="price-row">
-                            <div class="price-label">GST (<?php echo number_format($item->gst_percentage, 2); ?>%):</div>
-                            <div class="price-value">₹<?php echo number_format($item->gst_amount, 2); ?></div>
-                        </div>
-                        
-                        <div class="price-row total">
-                            <div class="price-label">Total Amount:</div>
-                            <div class="price-value">₹<?php echo number_format($item->total_price, 2); ?></div>
-                        </div>
-                    </div>
-                </div>
+            <div class="info-row">
+                <span class="info-label">Email:</span>
+                <span class="info-value"><?php echo htmlspecialchars($registration_data['email']); ?></span>
             </div>
-            
-            <!-- Payment Form -->
-            <?php echo form_open(current_url(), ['id' => 'payment-form']); ?>
-                <button type="submit" class="btn-payment" id="payment-btn">
-                    <i class="fa fa-check-circle"></i> Complete Registration (₹<?php echo number_format($item->total_price, 2); ?>)
-                </button>
-            <?php echo form_close(); ?>
-            
-            <!-- Back Button -->
-            <a href="<?php echo site_url('safelegalsolutions/safelegalsolutions_client/register/' . (isset($token) ? $token : '')); ?>" class="btn-back">
-                <i class="fa fa-arrow-left"></i> Back to Edit Details
-            </a>
-            
-            <!-- Security Note -->
-            <div class="security-note">
-                <small>
-                    <i class="fa fa-shield"></i> 
-                    Your information is secure and will be kept confidential
-                </small>
+            <div class="info-row">
+                <span class="info-label">Phone:</span>
+                <span class="info-value"><?php echo htmlspecialchars($registration_data['phone']); ?></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Address:</span>
+                <span class="info-value"><?php echo htmlspecialchars($registration_data['address']); ?></span>
             </div>
         </div>
+        
+        <!-- Package Information -->
+        <div class="info-group">
+            <h4><i class="fa fa-shopping-cart"></i> Selected Package</h4>
+            <div class="info-row">
+                <span class="info-label">Package Name:</span>
+                <span class="info-value"><?php echo htmlspecialchars($item->item_name); ?></span>
+            </div>
+            <?php if (!empty($item->duration_months)): ?>
+            <div class="info-row">
+                <span class="info-label">Duration:</span>
+                <span class="info-value"><?php echo $item->duration_months; ?> months</span>
+            </div>
+            <?php endif; ?>
+            <div class="info-row">
+                <span class="info-label">Description:</span>
+                <span class="info-value"><?php echo htmlspecialchars($item->description); ?></span>
+            </div>
+            
+            <!-- Price Breakdown -->
+            <div class="price-summary">
+                <div class="price-row">
+                    <span>Base Price:</span>
+                    <span>₹<?php echo number_format($item->base_price, 2); ?></span>
+                </div>
+                <div class="price-row">
+                    <span>GST (<?php echo number_format($item->gst_percentage, 2); ?>%):</span>
+                    <span>₹<?php echo number_format($item->gst_amount, 2); ?></span>
+                </div>
+                <div class="price-row total">
+                    <span>Total Amount:</span>
+                    <span>₹<?php echo number_format($item->total_price, 2); ?></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PAYMENT SECTION - NEW -->
+        <?php echo form_open(current_url(), ['id' => 'payment-form']); ?>
+            
+            <div class="payment-section">
+                <h4><i class="fa fa-credit-card"></i> Payment Information</h4>
+                
+                <div class="alert-info">
+                    <strong><i class="fa fa-info-circle"></i> Important:</strong> 
+                    Your client portal account will be created automatically once payment is confirmed as complete.
+                </div>
+                
+                <div class="payment-options">
+                    <!-- Option 1: Full Payment -->
+                    <div class="payment-option" onclick="selectPayment('paid')">
+                        <label>
+                            <input type="radio" name="payment_status" value="paid" id="payment_paid" required>
+                            <div>
+                                <strong>Payment Completed (100%)</strong>
+                                <div style="font-size: 14px; color: #666; margin-top: 5px;">
+                                    I have completed full payment of ₹<?php echo number_format($item->total_price, 2); ?>
+                                </div>
+                            </div>
+                        </label>
+                        <div class="payment-amount-input" id="amount_paid_input">
+                            <label>Paid Amount (₹):</label>
+                            <input type="number" 
+                                   name="amount_paid" 
+                                   id="amount_paid" 
+                                   step="0.01" 
+                                   min="0" 
+                                   max="<?php echo $item->total_price; ?>"
+                                   value="<?php echo $item->total_price; ?>"
+                                   placeholder="Enter amount paid">
+                        </div>
+                    </div>
+                    
+                    <!-- Option 2: Partial Payment -->
+                    <div class="payment-option" onclick="selectPayment('partial')">
+                        <label>
+                            <input type="radio" name="payment_status" value="partial" id="payment_partial">
+                            <div>
+                                <strong>Partial Payment</strong>
+                                <div style="font-size: 14px; color: #666; margin-top: 5px;">
+                                    I have made a partial payment (Portal access will be granted after full payment)
+                                </div>
+                            </div>
+                        </label>
+                        <div class="payment-amount-input" id="amount_partial_input">
+                            <label>Partial Amount Paid (₹):</label>
+                            <input type="number" 
+                                   name="amount_partial" 
+                                   id="amount_partial" 
+                                   step="0.01" 
+                                   min="0" 
+                                   max="<?php echo $item->total_price; ?>"
+                                   placeholder="Enter partial amount paid">
+                        </div>
+                    </div>
+                    
+                    <!-- Option 3: Pending Payment -->
+                    <div class="payment-option" onclick="selectPayment('unpaid')">
+                        <label>
+                            <input type="radio" name="payment_status" value="unpaid" id="payment_unpaid">
+                            <div>
+                                <strong>Payment Pending</strong>
+                                <div style="font-size: 14px; color: #666; margin-top: 5px;">
+                                    I will complete payment later (Portal access will be granted after payment)
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-submit">
+                <i class="fa fa-check"></i> Complete Registration
+            </button>
+            
+            <a href="<?php echo site_url('safelegalsolutions/safelegalsolutions_client/register/' . $token); ?>" 
+               class="btn btn-back">
+                <i class="fa fa-arrow-left"></i> Back to Registration Form
+            </a>
+            
+        <?php echo form_close(); ?>
     </div>
 </div>
 
-<!-- Scripts -->
 <script src="<?php echo base_url('assets/plugins/jquery/jquery.min.js'); ?>"></script>
-<script src="<?php echo base_url('assets/js/bootstrap.min.js'); ?>"></script>
-
 <script>
-$(document).ready(function() {
-    // Prevent double submission
-    var isSubmitting = false;
+function selectPayment(type) {
+    // Remove all selected classes
+    $('.payment-option').removeClass('selected');
     
-    $('#payment-form').on('submit', function(e) {
-        if (isSubmitting) {
+    // Hide all amount inputs
+    $('.payment-amount-input').removeClass('active');
+    
+    // Get the clicked option
+    const option = event.currentTarget;
+    $(option).addClass('selected');
+    
+    // Handle amount input visibility
+    if (type === 'paid') {
+        $('#payment_paid').prop('checked', true);
+        $('#amount_paid_input').addClass('active');
+        $('#amount_paid').prop('required', true);
+        $('#amount_partial').prop('required', false);
+    } else if (type === 'partial') {
+        $('#payment_partial').prop('checked', true);
+        $('#amount_partial_input').addClass('active');
+        $('#amount_partial').prop('required', true);
+        $('#amount_paid').prop('required', false);
+    } else {
+        $('#payment_unpaid').prop('checked', true);
+        $('#amount_paid').prop('required', false);
+        $('#amount_partial').prop('required', false);
+    }
+}
+
+// Form submission validation
+$('#payment-form').on('submit', function(e) {
+    const paymentStatus = $('input[name="payment_status"]:checked').val();
+    
+    if (!paymentStatus) {
+        e.preventDefault();
+        alert('Please select a payment option');
+        return false;
+    }
+    
+    if (paymentStatus === 'paid') {
+        const amountPaid = parseFloat($('#amount_paid').val());
+        const totalPrice = <?php echo $item->total_price; ?>;
+        
+        if (!amountPaid || amountPaid < totalPrice) {
             e.preventDefault();
+            alert('For full payment, amount must equal ₹' + totalPrice.toFixed(2));
             return false;
         }
+    }
+    
+    if (paymentStatus === 'partial') {
+        const amountPartial = parseFloat($('#amount_partial').val());
         
-        // Confirm before submission
-        if (!confirm('Confirm registration and proceed with payment of ₹<?php echo number_format($item->total_price, 2); ?>?')) {
+        if (!amountPartial || amountPartial <= 0) {
             e.preventDefault();
+            alert('Please enter a valid partial payment amount');
             return false;
         }
-        
-        isSubmitting = true;
-        
-        // Disable button and show loading
-        $('#payment-btn').prop('disabled', true)
-                         .html('<i class="fa fa-spinner fa-spin"></i> Processing...');
-        
-        return true;
-    });
+    }
+    
+    return true;
 });
 </script>
 

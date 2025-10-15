@@ -4,7 +4,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 /**
  * SafeLegalSolutions Module - Installation Script
- * Version: 1.5 - With Items/Packages + Payment Tracking + Client Account Integration
+ * Version: 2.0 - FIXED: Removed redundant payment fields (use sls_payments table)
  */
 
 // Get CodeIgniter instance
@@ -23,6 +23,10 @@ $db_prefix = db_prefix();
 log_message('info', '========== SafeLegalSolutions Installation Started ==========');
 log_message('info', 'Database: ' . $database_name);
 log_message('info', 'Prefix: ' . $db_prefix);
+
+// ==================== DISABLE FOREIGN KEY CHECKS ====================
+log_message('info', 'Disabling foreign key checks for clean installation...');
+$CI->db->query("SET FOREIGN_KEY_CHECKS = 0");
 
 // ==================== TABLE 1: BRANCH CATEGORIES ====================
 $table1 = $db_prefix . 'sls_branch_categories';
@@ -128,7 +132,7 @@ try {
     die('Failed to create table: ' . $table5 . ' - Error: ' . $e->getMessage());
 }
 
-// ==================== TABLE 4: STUDENTS (WITH ITEM_ID + PAYMENT TRACKING + CLIENT ACCOUNT INTEGRATION) ====================
+// ==================== TABLE 4: STUDENTS (CLEANED - REMOVED REDUNDANT PAYMENT FIELDS) ====================
 $table3 = $db_prefix . 'sls_students';
 log_message('info', 'Creating table: ' . $table3);
 
@@ -140,32 +144,44 @@ try {
         `id` INT(11) NOT NULL AUTO_INCREMENT,
         `branch_id` INT(11) NOT NULL,
         `nodal_partner_manager_id` INT(11) NOT NULL,
+        
+        -- Basic Info
         `student_name` VARCHAR(255) NOT NULL,
         `email` VARCHAR(100) NOT NULL,
         `phone` VARCHAR(20) NULL,
         `address` TEXT NULL,
         `date_of_birth` DATE NULL,
+        
+        -- Package/Item Selection
         `item_id` INT(11) NULL COMMENT 'Selected package/item',
-        `payment_collected` TINYINT(1) DEFAULT 0 COMMENT 'Cash payment collected flag',
-        `payment_date` DATE NULL COMMENT 'Date when payment was received',
-        `payment_notes` TEXT NULL COMMENT 'Payment notes (receipt number, etc.)',
+        
+        -- Profile Status
         `profile_completion` TINYINT(3) DEFAULT 0,
         `status` ENUM('draft','pending_review','approved','locked','change_requested') DEFAULT 'draft',
         `referral_code` VARCHAR(50) NULL,
+        
+        -- Client Account Integration
         `client_id` INT(11) NULL DEFAULT NULL COMMENT 'Perfex Client ID from tblclients',
         `client_created_at` DATETIME NULL DEFAULT NULL COMMENT 'When client account was created',
+        
+        -- Financial Tracking (AGGREGATED from sls_payments table)
+        `payment_status` ENUM('unpaid','partial','paid') DEFAULT 'unpaid' COMMENT 'Overall payment status',
+        `payment_percentage` DECIMAL(5,2) DEFAULT 0.00 COMMENT 'Payment completion % (0-100)',
+        `amount_paid` DECIMAL(15,2) DEFAULT 0.00 COMMENT 'Total amount paid (sum from payments table)',
+        `total_amount` DECIMAL(15,2) DEFAULT 0.00 COMMENT 'Total package amount (from item)',
+        
+        -- Earnings & Lock Status
         `earnings` DECIMAL(10,2) DEFAULT 0.00,
-        `payment_status` ENUM('unpaid','partial','paid') DEFAULT 'unpaid' COMMENT 'Payment status for automatic client creation',
-        `payment_percentage` DECIMAL(5,2) DEFAULT 0.00 COMMENT 'Payment completion percentage (0-100)',
-        `amount_paid` DECIMAL(15,2) DEFAULT 0.00 COMMENT 'Amount paid by student',
-        `total_amount` DECIMAL(15,2) DEFAULT 0.00 COMMENT 'Total amount to be paid (from item)',
         `is_locked` TINYINT(1) DEFAULT 0,
         `locked_at` DATETIME NULL,
         `locked_by` INT(11) NULL,
+        
+        -- Metadata
         `notes` TEXT NULL,
         `created_by` INT(11) NOT NULL DEFAULT 1,
         `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
         `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        
         PRIMARY KEY (`id`),
         UNIQUE KEY `email` (`email`),
         UNIQUE KEY `referral_code` (`referral_code`),
@@ -174,13 +190,12 @@ try {
         KEY `item_id` (`item_id`),
         KEY `status` (`status`),
         KEY `is_locked` (`is_locked`),
-        KEY `payment_collected` (`payment_collected`),
         KEY `idx_client_id` (`client_id`),
         KEY `idx_payment_status` (`payment_status`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
     
     $CI->db->query($sql3);
-    log_message('info', 'SUCCESS: Table ' . $table3 . ' created with item_id, payment tracking, and client account integration columns');
+    log_message('info', 'SUCCESS: Table ' . $table3 . ' created (redundant payment fields removed - use sls_payments table)');
 } catch (Exception $e) {
     log_message('error', 'ERROR creating ' . $table3 . ': ' . $e->getMessage());
     die('Failed to create table: ' . $table3 . ' - Error: ' . $e->getMessage());
@@ -220,12 +235,12 @@ try {
     die('Failed to create table: ' . $table4 . ' - Error: ' . $e->getMessage());
 }
 
-
 // ==================== TABLE 6: PAYMENT TRANSACTIONS ====================
 $table6 = $db_prefix . 'sls_payments';
 log_message('info', 'Creating table: ' . $table6);
 
 try {
+    // Drop if exists (for clean reinstall)
     $CI->db->query("DROP TABLE IF EXISTS `{$table6}`");
     
     $sql6 = "CREATE TABLE `{$table6}` (
@@ -265,6 +280,7 @@ $table7 = $db_prefix . 'sls_package_enrollments';
 log_message('info', 'Creating table: ' . $table7);
 
 try {
+    // Drop if exists (for clean reinstall)
     $CI->db->query("DROP TABLE IF EXISTS `{$table7}`");
     
     $sql7 = "CREATE TABLE `{$table7}` (
@@ -306,6 +322,11 @@ try {
     log_message('error', 'ERROR creating ' . $table7 . ': ' . $e->getMessage());
     die('Failed to create table: ' . $table7 . ' - Error: ' . $e->getMessage());
 }
+
+// ==================== RE-ENABLE FOREIGN KEY CHECKS ====================
+log_message('info', 'Re-enabling foreign key checks...');
+$CI->db->query("SET FOREIGN_KEY_CHECKS = 1");
+
 // ==================== INSERT DEFAULT CATEGORIES ====================
 log_message('info', 'Inserting default categories...');
 
@@ -400,8 +421,10 @@ $tables_to_check = [
     $table1 => 'Branch Categories',
     $table2 => 'Branches (with registration_token & is_default)',
     $table5 => 'Items/Packages',
-    $table3 => 'Students (with item_id + payment tracking + client account integration)',
-    $table4 => 'Change Requests'
+    $table3 => 'Students (cleaned - payment tracking via sls_payments)',
+    $table4 => 'Change Requests',
+    $table6 => 'Payment Transactions',
+    $table7 => 'Package Enrollments'
 ];
 
 $all_ok = true;
@@ -451,13 +474,10 @@ foreach ($tables_to_check as $table => $name) {
             log_message('info', "✓ VERIFIED: {$default_count} default branch exists");
         }
         
-        // Check if item_id, payment columns, and client account columns exist in students table
+        // Check students table structure (UPDATED - removed redundant payment fields)
         if ($table === $table3) {
             $fields = $CI->db->field_data($table);
             $has_item_id = false;
-            $has_payment_collected = false;
-            $has_payment_date = false;
-            $has_payment_notes = false;
             $has_client_id = false;
             $has_client_created_at = false;
             $has_payment_status = false;
@@ -468,15 +488,6 @@ foreach ($tables_to_check as $table => $name) {
             foreach ($fields as $field) {
                 if ($field->name === 'item_id') {
                     $has_item_id = true;
-                }
-                if ($field->name === 'payment_collected') {
-                    $has_payment_collected = true;
-                }
-                if ($field->name === 'payment_date') {
-                    $has_payment_date = true;
-                }
-                if ($field->name === 'payment_notes') {
-                    $has_payment_notes = true;
                 }
                 if ($field->name === 'client_id') {
                     $has_client_id = true;
@@ -498,7 +509,7 @@ foreach ($tables_to_check as $table => $name) {
                 }
             }
             
-            // Existing columns verification
+            // Verify essential columns
             if ($has_item_id) {
                 log_message('info', "✓ VERIFIED: item_id column exists in students table");
             } else {
@@ -506,28 +517,6 @@ foreach ($tables_to_check as $table => $name) {
                 $all_ok = false;
             }
             
-            if ($has_payment_collected) {
-                log_message('info', "✓ VERIFIED: payment_collected column exists in students table");
-            } else {
-                log_message('error', "✗ MISSING: payment_collected column in students table");
-                $all_ok = false;
-            }
-            
-            if ($has_payment_date) {
-                log_message('info', "✓ VERIFIED: payment_date column exists in students table");
-            } else {
-                log_message('error', "✗ MISSING: payment_date column in students table");
-                $all_ok = false;
-            }
-            
-            if ($has_payment_notes) {
-                log_message('info', "✓ VERIFIED: payment_notes column exists in students table");
-            } else {
-                log_message('error', "✗ MISSING: payment_notes column in students table");
-                $all_ok = false;
-            }
-            
-            // NEW: Client account columns verification
             if ($has_client_id) {
                 log_message('info', "✓ VERIFIED: client_id column exists in students table");
             } else {
@@ -594,23 +583,28 @@ log_message('info', "Branches in database: {$branch_count}");
 // ==================== FINAL STATUS ====================
 if ($all_ok && $category_count == 3 && $branch_count >= 1) {
     log_message('info', '========== Installation COMPLETED SUCCESSFULLY ==========');
-    log_message('info', 'All 5 tables created successfully:');
+    log_message('info', 'All 7 tables created successfully:');
     log_message('info', '  1. Branch Categories (3 default categories)');
     log_message('info', '  2. Branches (with registration_token & is_default)');
     log_message('info', '  3. Items/Packages (ready for manual entry)');
-    log_message('info', '  4. Students with complete integration:');
+    log_message('info', '  4. Students (CLEANED):');
     log_message('info', '     - Item/Package assignment (item_id)');
-    log_message('info', '     - Payment tracking (payment_collected, payment_date, payment_notes)');
-    log_message('info', '     - Automatic client creation (client_id, client_created_at)');
-    log_message('info', '     - Payment status tracking (payment_status, payment_percentage, amount_paid, total_amount)');
+    log_message('info', '     - Client account integration (client_id, client_created_at)');
+    log_message('info', '     - Payment aggregation fields (payment_status, payment_percentage, amount_paid, total_amount)');
+    log_message('info', '     - Individual payment records stored in sls_payments table');
     log_message('info', '  5. Change Requests');
-    log_message('info', '1 default branch created for admin under Safe Legal Solutions category (No manager assigned)');
-    log_message('info', 'Registration tokens auto-generated for all branches');
-    log_message('info', 'Client account auto-creation enabled when payment is 100% complete');
+    log_message('info', '  6. Payment Transactions (sls_payments)');
+    log_message('info', '  7. Package Enrollments (sls_package_enrollments)');
+    log_message('info', '');
+    log_message('info', 'Additional Setup:');
+    log_message('info', '  - 1 default branch created for admin under Safe Legal Solutions category');
+    log_message('info', '  - Registration tokens auto-generated for all branches');
+    log_message('info', '  - Client account auto-creation enabled when payment is 100% complete');
+    log_message('info', '  - Foreign key constraints properly configured');
     log_message('info', '========================================================');
     
     if (function_exists('log_activity')) {
-        log_activity('SafeLegalSolutions Module Installed Successfully [5 tables, 3 categories, 1 default branch (no manager), items ready for manual entry, payment tracking + client auto-creation enabled]');
+        log_activity('SafeLegalSolutions Module Installed Successfully [7 tables, 3 categories, 1 default branch, payment tracking optimized]');
     }
 } else {
     log_message('error', '========== Installation FAILED ==========');

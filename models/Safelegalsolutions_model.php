@@ -409,52 +409,86 @@ private $table_enrollments;
         return $this->get_students([], $limit);
     }
 
-    /**
-     * Add new student
-     * @param array $data
-     * @return int|bool Insert ID or false
-     */
-    public function add_student($data)
-    {
-        // Calculate profile completion
-        $data['profile_completion'] = $this->calculate_profile_completion($data);
-        
-        $this->db->insert($this->table_students, $data);
-        $insert_id = $this->db->insert_id();
-        
-        if ($insert_id) {
-            log_activity('New Student Added [ID: ' . $insert_id . ', Name: ' . $data['student_name'] . ']');
-            return $insert_id;
+   /**
+ * Add new student
+ * @param array $data
+ * @return int|bool Insert ID or false
+ */
+public function add_student($data)
+{
+    // ============================================================
+    // FILTER: Remove payment table fields (they go to sls_payments)
+    // ============================================================
+    $payment_table_fields = [
+        'payment_method',
+        'transaction_reference',
+        'payment_date',
+        'payment_notes',
+        'receipt_number'
+    ];
+    
+    foreach ($payment_table_fields as $field) {
+        if (isset($data[$field])) {
+            unset($data[$field]);
         }
-        
-        return false;
     }
+    
+    // Calculate profile completion
+    $data['profile_completion'] = $this->calculate_profile_completion($data);
+    
+    $this->db->insert($this->table_students, $data);
+    $insert_id = $this->db->insert_id();
+    
+    if ($insert_id) {
+        log_activity('New Student Added [ID: ' . $insert_id . ', Name: ' . $data['student_name'] . ']');
+        return $insert_id;
+    }
+    
+    return false;
+}
 
-    /**
-     * Update student
-     * @param int $id
-     * @param array $data
-     * @return bool
-     */
-    public function update_student($id, $data)
-    {
-        // Recalculate profile completion if relevant fields updated
-        if (isset($data['student_name']) || isset($data['email']) || isset($data['phone'])) {
-            $current = $this->get_student($id);
-            $merged = array_merge((array)$current, $data);
-            $data['profile_completion'] = $this->calculate_profile_completion($merged);
+   /**
+ * Update student
+ * @param int $id
+ * @param array $data
+ * @return bool
+ */
+public function update_student($id, $data)
+{
+    // ============================================================
+    // FILTER: Remove payment table fields (they go to sls_payments)
+    // ============================================================
+    $payment_table_fields = [
+        'payment_method',
+        'transaction_reference',
+        'payment_date',
+        'payment_notes',
+        'receipt_number'
+    ];
+    
+    foreach ($payment_table_fields as $field) {
+        if (isset($data[$field])) {
+            unset($data[$field]);
         }
-        
-        $this->db->where('id', $id);
-        $this->db->update($this->table_students, $data);
-        
-        if ($this->db->affected_rows() > 0) {
-            log_activity('Student Updated [ID: ' . $id . ']');
-            return true;
-        }
-        
-        return false;
     }
+    
+    // Recalculate profile completion if relevant fields updated
+    if (isset($data['student_name']) || isset($data['email']) || isset($data['phone'])) {
+        $current = $this->get_student($id);
+        $merged = array_merge((array)$current, $data);
+        $data['profile_completion'] = $this->calculate_profile_completion($merged);
+    }
+    
+    $this->db->where('id', $id);
+    $this->db->update($this->table_students, $data);
+    
+    if ($this->db->affected_rows() > 0) {
+        log_activity('Student Updated [ID: ' . $id . ']');
+        return true;
+    }
+    
+    return false;
+}
 
     /**
      * Delete student
@@ -1557,5 +1591,6 @@ public function get_expiring_enrollments($days = 30)
     
     return $this->db->get()->result();
 }
+
     
 }

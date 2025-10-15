@@ -243,25 +243,82 @@
 
                                 <hr style="border-top: 2px dashed #ddd; margin: 20px 0;">
 
-                                <!-- Payment Collection Section -->
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <h5 style="margin-top: 0; margin-bottom: 15px;">
-                                            <i class="fa fa-money"></i> Payment Collection
-                                        </h5>
-                                    </div>
-                                </div>
+                              <!-- Payment Collection Section -->
+<div class="row">
+    <div class="col-md-12">
+        <h5 style="margin-top: 0; margin-bottom: 15px;">
+            <i class="fa fa-money"></i> Payment Information
+        </h5>
+    </div>
+</div>
 
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <div class="checkbox">
-                                                <label style="font-size: 15px;">
-                                                    <input type="checkbox" name="payment_collected" id="payment_collected" value="1"
-                                                           <?php echo (isset($student) && !empty($student->payment_collected)) ? 'checked' : ''; ?>>
-                                                    <strong>Cash Payment Collected</strong>
-                                                </label>
-                                            </div>
+<div class="row">
+    <div class="col-md-4">
+        <div class="form-group">
+            <label for="payment_status" class="control-label">
+                <span class="text-danger">*</span> Payment Status
+            </label>
+            <select name="payment_status" id="payment_status" class="form-control" required>
+                <option value="unpaid" <?php echo (isset($student) && $student->payment_status == 'unpaid') ? 'selected' : ''; ?>>
+                    Unpaid
+                </option>
+                <option value="partial" <?php echo (isset($student) && $student->payment_status == 'partial') ? 'selected' : ''; ?>>
+                    Partial Payment
+                </option>
+                <option value="paid" <?php echo (isset($student) && $student->payment_status == 'paid') ? 'selected' : ''; ?>>
+                    Fully Paid
+                </option>
+            </select>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="form-group">
+            <label for="amount_paid" class="control-label">Amount Paid</label>
+            <input type="number" name="amount_paid" id="amount_paid" 
+                   class="form-control" 
+                   min="0" 
+                   step="0.01"
+                   placeholder="0.00"
+                   value="<?php echo isset($student) ? $student->amount_paid : '0.00'; ?>">
+            <small class="text-muted">Enter amount received</small>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="form-group">
+            <label for="payment_method" class="control-label">Payment Method</label>
+            <select name="payment_method" id="payment_method" class="form-control">
+                <option value="cash">Cash</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="upi">UPI</option>
+                <option value="card">Card</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="payment_date" class="control-label">Payment Date</label>
+            <input type="date" name="payment_date" id="payment_date" 
+                   class="form-control"
+                   max="<?php echo date('Y-m-d'); ?>"
+                   value="<?php echo date('Y-m-d'); ?>">
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="transaction_reference" class="control-label">Transaction Reference</label>
+            <input type="text" name="transaction_reference" id="transaction_reference" 
+                   class="form-control"
+                   placeholder="UTR/Ref Number (optional)">
+        </div>
+    </div>
+</div>
                                             <small class="text-muted">
                                                 <i class="fa fa-info-circle"></i> Check this if you have received the payment in cash
                                             </small>
@@ -504,17 +561,7 @@ $(function() {
     updatePriceDisplay();
     <?php endif; ?>
 
-    // Enable/disable payment date based on checkbox
-    $('#payment_collected').on('change', function() {
-        if ($(this).is(':checked')) {
-            $('#payment_date').prop('disabled', false);
-        } else {
-            $('#payment_date').prop('disabled', true);
-        }
-    });
-
-    // Trigger on page load
-    $('#payment_collected').trigger('change');
+   
 });
 
 // Update price display based on selected package

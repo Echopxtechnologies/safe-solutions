@@ -117,7 +117,7 @@
                     </div>
                     <div class="panel-body">
                         <div class="row">
-                            <div class="col-md-3 col-sm-6 text-center" style="margin-bottom: 15px;">
+                            <div class="col-md-4 col-sm-6 text-center" style="margin-bottom: 15px;">
                                 <a href="<?php echo site_url('clients/safelegalsolutions_client/my_profile'); ?>" 
                                    class="btn btn-primary btn-block btn-lg">
                                     <i class="fa fa-user fa-2x" style="display: block; margin-bottom: 10px;"></i>
@@ -125,21 +125,14 @@
                                 </a>
                             </div>
                             
-                            <div class="col-md-3 col-sm-6 text-center" style="margin-bottom: 15px;">
-                                <a href="#referral-section" class="btn btn-success btn-block btn-lg">
-                                    <i class="fa fa-share-alt fa-2x" style="display: block; margin-bottom: 10px;"></i>
-                                    My Referral Code
-                                </a>
-                            </div>
-                            
-                            <div class="col-md-3 col-sm-6 text-center" style="margin-bottom: 15px;">
+                            <div class="col-md-4 col-sm-6 text-center" style="margin-bottom: 15px;">
                                 <a href="<?php echo site_url('clients/tickets'); ?>" class="btn btn-info btn-block btn-lg">
                                     <i class="fa fa-ticket fa-2x" style="display: block; margin-bottom: 10px;"></i>
                                     Support Tickets
                                 </a>
                             </div>
                             
-                            <div class="col-md-3 col-sm-6 text-center" style="margin-bottom: 15px;">
+                            <div class="col-md-4 col-sm-6 text-center" style="margin-bottom: 15px;">
                                 <a href="<?php echo site_url('clients/profile'); ?>" class="btn btn-warning btn-block btn-lg">
                                     <i class="fa fa-cog fa-2x" style="display: block; margin-bottom: 10px;"></i>
                                     Account Settings
@@ -164,7 +157,6 @@
                     <div class="panel-body">
                         <table class="table table-bordered">
                             <tbody>
-                                
                                 <tr>
                                     <td style="font-weight: bold;">
                                         <i class="fa fa-building"></i> Branch
@@ -253,57 +245,6 @@
             </div>
         </div>
 
-        <!-- Referral Section -->
-        <div class="row" id="referral-section">
-            <div class="col-md-12">
-                <div class="panel panel-warning">
-                    <div class="panel-heading">
-                        <h4 class="panel-title">
-                            <i class="fa fa-share-alt"></i> Your Referral Program
-                        </h4>
-                    </div>
-                    <div class="panel-body">
-                        <div class="row">
-                            <div class="col-md-6 text-center">
-                                <h4>Your Referral Code</h4>
-                                <div style="background: #f8f9fa; padding: 30px; border-radius: 10px; border: 3px dashed #ffc107; margin: 20px 0;">
-                                    <h1 style="font-family: monospace; font-size: 48px; margin: 0; color: #333; letter-spacing: 5px;">
-                                        <?php echo htmlspecialchars($student->referral_code); ?>
-                                    </h1>
-                                </div>
-                                <button class="btn btn-primary btn-lg" onclick="copyReferralCode()">
-                                    <i class="fa fa-copy"></i> Copy Code
-                                </button>
-                            </div>
-                            <div class="col-md-6">
-                                <h4>How It Works</h4>
-                                <div style="padding: 20px;">
-                                    <ol style="font-size: 16px; line-height: 2;">
-                                        <li>Share your unique referral code with friends and family</li>
-                                        <li>When they register using your code, both of you benefit</li>
-                                        <li>Track your referral earnings in real-time</li>
-                                        <li>Earn rewards for every successful referral!</li>
-                                    </ol>
-                                </div>
-                                
-                                <?php if (isset($student->earnings) && $student->earnings > 0): ?>
-                                <div class="alert alert-success" style="margin-top: 20px;">
-                                    <h4 style="margin-top: 0;">
-                                        <i class="fa fa-trophy"></i> Your Earnings
-                                    </h4>
-                                    <h2 style="margin: 10px 0;">
-                                        ₹<?php echo number_format($student->earnings, 2); ?>
-                                    </h2>
-                                    <p style="margin-bottom: 0;">Keep sharing to earn more!</p>
-                                </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Recent Activity / Timeline -->
         <div class="row">
             <div class="col-md-12">
@@ -379,27 +320,6 @@
 
     </div>
 </div>
-
-<script>
-function copyReferralCode() {
-    var code = '<?php echo $student->referral_code; ?>';
-    
-    // Create temporary input
-    var tempInput = document.createElement('input');
-    tempInput.value = code;
-    document.body.appendChild(tempInput);
-    tempInput.select();
-    
-    try {
-        document.execCommand('copy');
-        alert('Referral code copied to clipboard: ' + code);
-    } catch (err) {
-        prompt('Copy this code:', code);
-    }
-    
-    document.body.removeChild(tempInput);
-}
-</script>
 
 <style>
 /* Timeline Styles */

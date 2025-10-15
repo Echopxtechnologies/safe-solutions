@@ -5,14 +5,15 @@ defined('BASEPATH') or exit('No direct script access allowed');
  * SafeLegalSolutions Client Controller
  * PUBLIC ACCESS - No authentication required for registration
  * AUTHENTICATED ACCESS - Client portal methods require login
- * Version: 2.7 - Fixed URLs and navigation
+ * Version: 3.0 - Complete with Payment & Client Creation
  * 
  * File: modules/safelegalsolutions/controllers/Safelegalsolutions_client.php
  * 
- * CHANGELOG v2.7:
- * - Fixed referral_card method name (removed 'download_' prefix)
- * - All URLs now match navigation buttons
- * - Improved authentication checks
+ * CHANGELOG v3.0:
+ * - Added payment selection in review page
+ * - Fixed client account creation workflow
+ * - Improved error handling and logging
+ * - All existing functionality preserved
  */
 class Safelegalsolutions_client extends ClientsController
 {
@@ -181,8 +182,6 @@ class Safelegalsolutions_client extends ClientsController
             'callback_validate_age'
         ]);
         
-
-        
         // Package Selection: Required, must exist and be active
         $this->form_validation->set_rules('item_id', 'Package Selection', [
             'required',
@@ -220,7 +219,6 @@ class Safelegalsolutions_client extends ClientsController
             'phone'          => trim($post_data['phone']),
             'address'        => trim($post_data['address']),
             'date_of_birth'  => $post_data['date_of_birth'],
-      
             'item_id'        => $post_data['item_id']
         ]);
         
@@ -287,7 +285,13 @@ class Safelegalsolutions_client extends ClientsController
     /**
      * Complete registration after payment review
      * 
-     * IMPORTANT: Automatically creates client account when payment is 100% complete
+     * WORKFLOW:
+     * 1. Get payment information from form
+     * 2. Calculate payment percentage
+     * 3. Insert student record
+     * 4. Check if payment is 100% complete
+     * 5. If complete, create client account + send email
+     * 6. Redirect to success page
      * 
      * @param array $registration_data Registration form data
      * @param object $branch Branch object
@@ -302,24 +306,43 @@ class Safelegalsolutions_client extends ClientsController
         // Generate unique referral code
         $referral_code = $this->safelegalsolutions_client_model->generate_referral_code();
         
-        // Get payment information from POST
-        $payment_status = $this->input->post('payment_status');
-        $amount_paid = $this->input->post('amount_paid');
+        // ============================================================
+        // GET PAYMENT INFORMATION FROM FORM
+        // ============================================================
         
-        // Default payment values
-        if (empty($payment_status)) {
+        $payment_status = $this->input->post('payment_status'); // 'paid', 'partial', or 'unpaid'
+        $amount_paid = 0.00;
+        
+        // Determine amount based on payment status
+        if ($payment_status === 'paid') {
+            // Full payment
+            $amount_paid = $this->input->post('amount_paid');
+            if (empty($amount_paid)) {
+                $amount_paid = $item->total_price; // Default to full amount
+            }
+        } elseif ($payment_status === 'partial') {
+            // Partial payment
+            $amount_paid = $this->input->post('amount_partial');
+            if (empty($amount_paid)) {
+                $amount_paid = 0.00;
+            }
+        } else {
+            // Unpaid
             $payment_status = 'unpaid';
-        }
-        
-        if (empty($amount_paid)) {
             $amount_paid = 0.00;
         }
+        
+        // Ensure amount is numeric
+        $amount_paid = (float)$amount_paid;
         
         // Calculate payment percentage
         $payment_percentage = 0;
         if ($item->total_price > 0) {
             $payment_percentage = ($amount_paid / $item->total_price) * 100;
         }
+        
+        // Log payment info for debugging
+        log_activity('Public Registration - Payment Info: Status=' . $payment_status . ', Amount=' . $amount_paid . ', Percentage=' . $payment_percentage . '%');
         
         // ============================================================
         // PREPARE STUDENT DATA
@@ -334,7 +357,6 @@ class Safelegalsolutions_client extends ClientsController
             'phone'                      => $registration_data['phone'],
             'address'                    => $registration_data['address'],
             'date_of_birth'              => $registration_data['date_of_birth'],
-       
             'item_id'                    => $registration_data['item_id'],
             'payment_status'             => $payment_status,
             'payment_percentage'         => $payment_percentage,
@@ -344,7 +366,7 @@ class Safelegalsolutions_client extends ClientsController
             'status'                     => 'draft',
             'profile_completion'         => $profile_completion,
             'earnings'                   => '0.00',
-            'notes'                      => 'Package: ' . $item->item_name . ' | Price: ₹' . number_format($item->total_price, 2) . ' | Payment: ' . ucfirst($payment_status),
+            'notes'                      => 'Package: ' . $item->item_name . ' | Price: ₹' . number_format($item->total_price, 2) . ' | Payment: ' . ucfirst($payment_status) . ' (' . number_format($payment_percentage, 2) . '%)',
             'is_locked'                  => 0
         ];
         
@@ -355,37 +377,41 @@ class Safelegalsolutions_client extends ClientsController
         $student_id = $this->safelegalsolutions_client_model->add_student($insert_data);
         
         if ($student_id) {
+            log_activity('Public Registration: Student created [ID: ' . $student_id . ', Email: ' . $registration_data['email'] . ', Payment: ' . $payment_status . ' (' . $payment_percentage . '%)]');
+            
             // ============================================================
             // AUTO-CREATE CLIENT ACCOUNT IF PAYMENT IS 100% COMPLETE
             // ============================================================
             
             $payment_complete = $this->safelegalsolutions_client_model->is_payment_complete($student_id);
             
+            log_activity('Public Registration: Payment check result for Student ID ' . $student_id . ' = ' . ($payment_complete ? 'COMPLETE' : 'INCOMPLETE'));
+            
             if ($payment_complete) {
-                // Payment is 100% complete - create client account
+                log_activity('Public Registration: Payment complete (' . $payment_percentage . '%), creating client account [Student ID: ' . $student_id . ']');
+                
+                // Create client account + send email
                 $client_result = $this->safelegalsolutions_client_model->create_client_account_for_student($student_id);
                 
                 if ($client_result['success']) {
-                    // Log successful client account creation
-                    log_activity('Public Registration: Client account auto-created [Student ID: ' . $student_id . ', Client ID: ' . $client_result['client_id'] . ', Email: ' . $registration_data['email'] . ']');
+                    log_activity('Public Registration: ✓ Client account created successfully [Student ID: ' . $student_id . ', Client ID: ' . $client_result['client_id'] . ']');
                     
-                    // Set success flash messages
                     $this->session->set_flashdata('client_account_created', true);
-                    $this->session->set_flashdata('client_credentials_sent', true);
+                    $this->session->set_flashdata('client_id', $client_result['client_id']);
+                    $this->session->set_flashdata('email_sent', $client_result['email_sent']);
                 } else {
-                    // Log failed client account creation
-                    log_activity('Public Registration: Client account creation failed [Student ID: ' . $student_id . ', Error: ' . $client_result['message'] . ']');
+                    log_activity('Public Registration: ✗ Client creation failed [Student ID: ' . $student_id . ', Error: ' . $client_result['message'] . ']');
                     
-                    // Set error flash messages
                     $this->session->set_flashdata('client_account_created', false);
-                    $this->session->set_flashdata('client_creation_error', $client_result['message']);
+                    $this->session->set_flashdata('client_error', $client_result['message']);
                 }
             } else {
-                // Payment incomplete - log for admin review
-                log_activity('Public Registration: Payment incomplete, client account not created [Student ID: ' . $student_id . ', Payment: ' . $payment_percentage . '%]');
+                log_activity('Public Registration: Payment incomplete (' . $payment_percentage . '%), client account NOT created [Student ID: ' . $student_id . ']');
+                $this->session->set_flashdata('payment_incomplete', true);
+                $this->session->set_flashdata('payment_percentage', $payment_percentage);
             }
             
-            // Clear registration session data
+            // Clear registration session
             $this->session->unset_userdata('registration_data');
             
             // Redirect to success page
@@ -395,6 +421,8 @@ class Safelegalsolutions_client extends ClientsController
             // ============================================================
             // REGISTRATION FAILED
             // ============================================================
+            
+            log_activity('Public Registration: Failed to insert student record');
             
             $data = [
                 'title'             => 'Review & Payment',
@@ -440,8 +468,11 @@ class Safelegalsolutions_client extends ClientsController
         
         // Check if client account was created
         $client_account_created = $this->session->flashdata('client_account_created');
-        $client_credentials_sent = $this->session->flashdata('client_credentials_sent');
-        $client_creation_error = $this->session->flashdata('client_creation_error');
+        $client_id = $this->session->flashdata('client_id');
+        $email_sent = $this->session->flashdata('email_sent');
+        $client_error = $this->session->flashdata('client_error');
+        $payment_incomplete = $this->session->flashdata('payment_incomplete');
+        $payment_percentage = $this->session->flashdata('payment_percentage');
         
         // Check if student has client_id
         $has_client_account = !empty($student->client_id);
@@ -453,14 +484,15 @@ class Safelegalsolutions_client extends ClientsController
             'student_name'            => $student->student_name,
             'email'                   => $student->email,
             'referral_code'           => $student->referral_code,
-     
             'branch'                  => $branch,
             'item'                    => $item,
             'payment_status'          => $student->payment_status,
             'payment_percentage'      => isset($student->payment_percentage) ? $student->payment_percentage : 0,
             'client_account_created'  => $client_account_created,
-            'client_credentials_sent' => $client_credentials_sent,
-            'client_creation_error'   => $client_creation_error,
+            'client_id'               => $client_id,
+            'email_sent'              => $email_sent,
+            'client_error'            => $client_error,
+            'payment_incomplete'      => $payment_incomplete,
             'has_client_account'      => $has_client_account
         ];
         
