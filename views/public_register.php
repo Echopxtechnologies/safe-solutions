@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($title) ? $title : 'Candidate Registration'; ?> - Safe Legal Solutions</title>
+    <title><?php echo isset($title) ? $title : 'Candidate Registration'; ?> - Safe Legal </title>
     
     <!-- Bootstrap & FontAwesome -->
     <link href="<?php echo base_url('assets/css/bootstrap.min.css'); ?>" rel="stylesheet">

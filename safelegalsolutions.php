@@ -3,7 +3,7 @@
 defined('BASEPATH') or exit('No direct script access allowed');
 
 /*
-Module Name: Safe Legal Solutions
+Module Name: Safe Legal
 Description: Partner and Candidate Management System with Role-based Access + Client Portal
 Version: 2.0 - Fixed Client Area Routing
 Author: Your Name
@@ -77,6 +77,32 @@ function safelegalsolutions_deactivation_hook()
 function is_sls_manager_or_admin()
 {
     return is_admin() || has_permission('safelegalsolutions_manager', '', 'manage');
+}
+
+/**
+ * Check if user is NPM (Nodal Partner Manager)
+ * Simple role check - no permission complexity
+ * 
+ * @return bool
+ */
+function is_npm()
+{
+    if (is_admin()) return false;
+    if (is_sls_manager_or_admin()) return false;
+    
+    $CI = &get_instance();
+    $staff_id = get_staff_user_id();
+    
+    // Get staff role
+    $staff = $CI->db->get_where(db_prefix() . 'staff', ['staffid' => $staff_id])->row();
+    if (!$staff) return false;
+    
+    // Get role name
+    $role = $CI->db->get_where(db_prefix() . 'roles', ['roleid' => $staff->role])->row();
+    if (!$role) return false;
+    
+    // Check if role is NPM
+    return $role->name === 'SLS Nodal Partner Manager';
 }
 
 // ================================================================
@@ -383,11 +409,11 @@ function safelegalsolutions_init_menu_items()
     register_staff_capabilities('safelegalsolutions_students', $npm_capabilities, 'SLS Candidates');
 
     // Show menu to Manager, Admin, or users with candidate permissions
-    if (is_sls_manager_or_admin() || has_permission('safelegalsolutions_students', '', 'view')) {
+    if (is_sls_manager_or_admin() || is_npm()) {
         
         // Main Menu Item
         $CI->app_menu->add_sidebar_menu_item('safelegalsolutions', [
-            'name'     => 'Safe Legal Solutions',
+            'name'     => 'Safe Legal',
             'href'     => admin_url('safelegalsolutions/dashboard'),
             'icon'     => 'fa fa-graduation-cap',
             'position' => 5,
@@ -453,7 +479,7 @@ function safelegalsolutions_init_menu_items()
 /**
  * Hide unwanted menu items for NPM and MANAGER using CSS
  * Only System Admin sees all Perfex menus
- * Manager and NPM only see Safe Legal Solutions menu
+ * Manager and NPM only see Safe Legal menu
  */
 hooks()->add_action('app_admin_head', 'safelegalsolutions_hide_npm_menus_css');
 
@@ -470,14 +496,12 @@ function safelegalsolutions_hide_npm_menus_css()
     $is_manager = has_permission('safelegalsolutions_manager', '', 'manage');
     
     // Check if user is NPM
-    $has_candidate_permission = has_permission('safelegalsolutions_students', '', 'view');
-    $has_no_customer_permission = !has_permission('customers', '', 'view');
-    $is_npm = $has_candidate_permission && $has_no_customer_permission && !$is_manager;
+    $is_npm = is_npm();
     
     // Hide all menus except SLS for both Manager and NPM
     if ($is_manager || $is_npm) {
         echo '<style>
-            /* Hide all sidebar menu items except Safe Legal Solutions */
+            /* Hide all sidebar menu items except Safe Legal */
             #side-menu > li:not(.menu-item-safelegalsolutions) {
                 display: none !important;
             }
@@ -492,7 +516,7 @@ function safelegalsolutions_hide_npm_menus_css()
                 display: none !important;
             }
             
-            /* Ensure Safe Legal Solutions menu is visible */
+            /* Ensure Safe Legal menu is visible */
             #side-menu > li.menu-item-safelegalsolutions {
                 display: block !important;
             }
@@ -521,7 +545,7 @@ function safelegalsolutions_redirect_npm_to_dashboard($staff_id)
     $is_manager = has_permission('safelegalsolutions_manager', '', 'manage');
     
     // Check if user is NPM
-    $has_candidate_permission = has_permission('safelegalsolutions_students', '', 'view');
+    $has_candidate_permission = is_npm();
     $has_no_customer_permission = !has_permission('customers', '', 'view');
     $is_npm = $has_candidate_permission && $has_no_customer_permission && !$is_manager;
     
@@ -556,7 +580,7 @@ function safelegalsolutions_redirect_from_homepage()
         $is_manager = has_permission('safelegalsolutions_manager', '', 'manage');
         
         // Check if user is NPM
-        $has_candidate_permission = has_permission('safelegalsolutions_students', '', 'view');
+        $has_candidate_permission = is_npm();
         $has_no_customer_permission = !has_permission('customers', '', 'view');
         $is_npm = $has_candidate_permission && $has_no_customer_permission && !$is_manager;
         

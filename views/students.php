@@ -63,6 +63,10 @@
         color: #28a745;
     }
     
+    .action-links .text-warning:hover {
+        color: #ffc107;
+    }
+    
     .action-separator {
         color: #cbd5e0;
         margin: 0 4px;
@@ -111,6 +115,40 @@
         background: #667eea;
         color: white;
     }
+    
+    /* Change Request Modal Styles */
+    .change-request-modal .modal-header {
+        background: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .change-request-form .form-group label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .change-request-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        font-size: 10px;
+        border-radius: 3px;
+        margin-left: 5px;
+    }
+    
+    .change-request-badge.pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .change-request-badge.approved {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .change-request-badge.rejected {
+        background: #f8d7da;
+        color: #721c24;
+    }
 </style>
 
 <div id="wrapper">
@@ -120,7 +158,7 @@
                 <div class="panel_s">
                     <div class="panel-body">
                         <div class="row">
-                            <div class="col-md-8">
+                            <div class="col-md-6">
                                 <h4 class="no-margin">
                                     <i class="fa fa-users"></i> Candidates Management
                                     <?php if (!is_admin() && is_sls_manager_or_admin()): ?>
@@ -130,8 +168,22 @@
                                     <?php endif; ?>
                                 </h4>
                             </div>
-                            <div class="col-md-4 text-right">
-                                <?php if (has_permission('safelegalsolutions_students', '', 'create') || is_sls_manager_or_admin()): ?>
+                            <div class="col-md-6 text-right">
+                                <?php if (is_sls_manager_or_admin()): ?>
+                                    <a href="<?php echo admin_url('safelegalsolutions/change_requests'); ?>" class="btn btn-warning btn-sm" style="margin-right: 10px;">
+                                        <i class="fa fa-exchange"></i> Change Requests
+                                        <?php 
+                                        // Count pending change requests
+                                        $this->db->where('status', 'pending');
+                                        $pending_count = $this->db->count_all_results(db_prefix() . 'sls_change_requests');
+                                        if ($pending_count > 0): 
+                                        ?>
+                                            <span class="badge" style="background: #dc3545;"><?php echo $pending_count; ?></span>
+                                        <?php endif; ?>
+                                    </a>
+                                <?php endif; ?>
+                                
+                                <?php if (is_npm() || is_sls_manager_or_admin()): ?>
                                     <a href="<?php echo admin_url('safelegalsolutions/student'); ?>" class="btn btn-primary">
                                         <i class="fa fa-plus"></i> New Candidate
                                     </a>
@@ -159,7 +211,7 @@
                                 </thead>
                                 <tbody>
                                     <?php 
-                                    // Get candidates with item/package information (DB table still sls_students)
+                                    // Get candidates with item/package information
                                     if (is_sls_manager_or_admin()) {
                                         // Admin/Manager sees ALL candidates
                                         $this->db->select($this->db->dbprefix('sls_students') . '.*, ' . 
@@ -208,8 +260,12 @@
                                     }
                                     
                                     if (!empty($candidates)): 
-                                        $serial_number = 1; // Initialize serial number counter
+                                        $serial_number = 1;
                                         foreach ($candidates as $candidate): 
+                                            // Check if there are pending change requests for this candidate
+                                            $this->db->where('student_id', $candidate->id);
+                                            $this->db->where('status', 'pending');
+                                            $pending_changes = $this->db->count_all_results(db_prefix() . 'sls_change_requests');
                                     ?>
                                         <tr>
                                             <!-- Serial Number -->
@@ -219,19 +275,51 @@
                                             <td>
                                                 <div class="candidate-name">
                                                     <?php echo htmlspecialchars($candidate->student_name); ?>
+                                                    
+                                                    <!-- Show Pending Change Request Badge -->
+                                                    <?php if ($pending_changes > 0): ?>
+                                                        <span class="change-request-badge pending">
+                                                            <i class="fa fa-clock-o"></i> <?php echo $pending_changes; ?> Pending
+                                                        </span>
+                                                    <?php endif; ?>
                                                 </div>
                                                 <div class="action-links">
-                                                    <!-- Edit Link - Everyone can edit -->
-                                                    <a href="<?php echo admin_url('safelegalsolutions/student/' . $candidate->id); ?>">
-                                                        Edit
-                                                    </a>
+                                                    <?php if ($candidate->is_locked == 1): ?>
+                                                        <!-- LOCKED PROFILE: Show "Request Change" for NPM, "View/Edit" for Admin -->
+                                                        
+                                                        <?php if (is_sls_manager_or_admin()): ?>
+                                                            <!-- Admin can always edit -->
+                                                            <a href="<?php echo admin_url('safelegalsolutions/student/' . $candidate->id); ?>">
+                                                                <i class="fa fa-edit"></i> Edit
+                                                            </a>
+                                                        <?php else: ?>
+                                                            <!-- NPM: Request Change -->
+                                                            <a href="javascript:void(0);" 
+                                                               onclick="openChangeRequestModal(<?php echo $candidate->id; ?>, '<?php echo htmlspecialchars($candidate->student_name, ENT_QUOTES); ?>');"
+                                                               class="text-warning">
+                                                                <i class="fa fa-exchange"></i> Request Change
+                                                            </a>
+                                                            
+                                                            <span class="action-separator">|</span>
+                                                            
+                                                            <a href="<?php echo admin_url('safelegalsolutions/student/' . $candidate->id); ?>">
+                                                                <i class="fa fa-eye"></i> View
+                                                            </a>
+                                                        <?php endif; ?>
+                                                        
+                                                    <?php else: ?>
+                                                        <!-- UNLOCKED PROFILE: Normal Edit -->
+                                                        <a href="<?php echo admin_url('safelegalsolutions/student/' . $candidate->id); ?>">
+                                                            <i class="fa fa-edit"></i> Edit
+                                                        </a>
+                                                    <?php endif; ?>
                                                     
-                                                    <!-- Submit for Review - NPM only, when profile is 100% complete -->
+                                                    <!-- Submit for Review - NPM only, when profile is 100% complete and unlocked -->
                                                     <?php if ($candidate->profile_completion == 100 && $candidate->status == 'draft' && $candidate->is_locked == 0): ?>
                                                         <span class="action-separator">|</span>
                                                         <a href="<?php echo admin_url('safelegalsolutions/submit_for_review/' . $candidate->id); ?>" 
                                                            onclick="return confirm('Submit this candidate profile for admin review?');">
-                                                            Submit for Review
+                                                            <i class="fa fa-send"></i> Submit for Review
                                                         </a>
                                                     <?php endif; ?>
                                                     
@@ -241,7 +329,16 @@
                                                         <a href="<?php echo admin_url('safelegalsolutions/approve_student/' . $candidate->id); ?>" 
                                                            class="text-success"
                                                            onclick="return confirm('Approve and lock this candidate profile?');">
-                                                            Approve
+                                                            <i class="fa fa-check"></i> Approve
+                                                        </a>
+                                                    <?php endif; ?>
+                                                    
+                                                    <!-- View Change Requests -->
+                                                    <?php if ($pending_changes > 0 && is_sls_manager_or_admin()): ?>
+                                                        <span class="action-separator">|</span>
+                                                        <a href="<?php echo admin_url('safelegalsolutions/change_requests?student_id=' . $candidate->id); ?>" 
+                                                           class="text-warning">
+                                                            <i class="fa fa-exchange"></i> View Requests (<?php echo $pending_changes; ?>)
                                                         </a>
                                                     <?php endif; ?>
                                                     
@@ -251,7 +348,7 @@
                                                         <a href="<?php echo admin_url('safelegalsolutions/delete_student/' . $candidate->id); ?>" 
                                                            class="text-danger"
                                                            onclick="return confirm('Are you sure you want to delete this candidate?');">
-                                                            Delete
+                                                            <i class="fa fa-trash"></i> Delete
                                                         </a>
                                                     <?php endif; ?>
                                                 </div>
@@ -330,7 +427,7 @@
                                                 <div style="padding: 40px 0;">
                                                     <i class="fa fa-users" style="font-size: 48px; color: #ddd; margin-bottom: 15px; display: block;"></i>
                                                     <p class="text-muted" style="font-size: 16px; margin-bottom: 15px;">No candidates found.</p>
-                                                    <?php if (has_permission('safelegalsolutions_students', '', 'create') || is_sls_manager_or_admin()): ?>
+                                                    <?php if (is_npm() || is_sls_manager_or_admin()): ?>
                                                         <a href="<?php echo admin_url('safelegalsolutions/student'); ?>" class="btn btn-primary">
                                                             <i class="fa fa-plus"></i> Add Your First Candidate
                                                         </a>
@@ -392,37 +489,123 @@
         </div>
     </div>
 </div>
-
+<!-- Change Request Modal -->
+<div class="modal fade change-request-modal" id="changeRequestModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <?php echo form_open(admin_url('safelegalsolutions/submit_change_request')); ?>
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title">
+                        <i class="fa fa-exchange"></i> Request Change for: <span id="modal-student-name"></span>
+                    </h4>
+                </div>
+                
+                <div class="modal-body">
+                    <!-- Hidden field for student ID -->
+                    <input type="hidden" name="student_id" id="modal-student-id">
+                    
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle"></i> 
+                        <strong>Note:</strong> This profile is locked. Please describe the changes you need, and an admin will review your request.
+                    </div>
+                    
+                    <div class="change-request-form">
+                        <div class="form-group">
+                            <label for="field_name">Field to Change <span class="text-danger">*</span></label>
+                            <select name="field_name" id="field_name" class="form-control selectpicker" required data-live-search="true">
+                                <option value="">-- Select Field --</option>
+                                <option value="student_name">Student Name</option>
+                                <option value="email">Email Address</option>
+                                <option value="phone">Phone Number</option>
+                                <option value="address">Address</option>
+                                <option value="date_of_birth">Date of Birth</option>
+                                <option value="passport_number">Passport Number</option>
+                                <option value="item_id">Package Selection</option>
+                                <option value="payment_status">Payment Status</option>
+                                <option value="amount_paid">Amount Paid</option>
+                                <option value="notes">Notes</option>
+                                <option value="other">Other (Specify in reason)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="new_value">New Value <span class="text-danger">*</span></label>
+                            <textarea name="new_value" id="new_value" class="form-control" rows="3" required
+                                      placeholder="Enter the new value you want for this field"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reason">Reason for Change <span class="text-danger">*</span></label>
+                            <textarea name="reason" id="reason" class="form-control" rows="4" required
+                                      placeholder="Explain why this change is needed (e.g., 'Passport number updated', 'Name correction required')"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">
+                        <i class="fa fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fa fa-paper-plane"></i> Submit Request
+                    </button>
+                </div>
+            <?php echo form_close(); ?>
+        </div>
+    </div>
+</div>
 <!-- Initialize DataTables -->
 <script>
-    $(document).ready(function() {
-        <?php if (!empty($candidates)): ?>
-        var table = $('#candidates-table').DataTable({
-            "pageLength": 25,
-            "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-            "order": [[0, "asc"]],
-            "columnDefs": [
-                { "orderable": false, "targets": 0 } // Disable sorting on serial number
-            ],
-            "language": {
-                "search": "Search candidates:",
-                "lengthMenu": "Show _MENU_ candidates per page",
-                "info": "Showing _START_ to _END_ of _TOTAL_ candidates",
-                "infoEmpty": "No candidates available",
-                "infoFiltered": "(filtered from _MAX_ total candidates)",
-                "zeroRecords": "No matching candidates found",
-                "emptyTable": "No candidates available"
-            }
-        });
-        
-        // Renumber serial numbers on each page/sort/search
-        table.on('order.dt search.dt', function () {
-            table.column(0, {search:'applied', order:'applied'}).nodes().each(function (cell, i) {
-                cell.innerHTML = i + 1;
-            });
-        }).draw();
-        <?php endif; ?>
+$(document).ready(function() {
+    <?php if (!empty($candidates)): ?>
+    // Initialize DataTables
+    var table = $('#candidates-table').DataTable({
+        "pageLength": 25,
+        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        "order": [[0, "asc"]],
+        "columnDefs": [
+            { "orderable": false, "targets": 0 }
+        ],
+        "language": {
+            "search": "Search candidates:",
+            "lengthMenu": "Show _MENU_ candidates per page",
+            "info": "Showing _START_ to _END_ of _TOTAL_ candidates",
+            "infoEmpty": "No candidates available",
+            "infoFiltered": "(filtered from _MAX_ total candidates)",
+            "zeroRecords": "No matching candidates found",
+            "emptyTable": "No candidates available"
+        }
     });
-</script>
+    
+    // Re-number rows after sorting/filtering
+    table.on('order.dt search.dt', function () {
+        table.column(0, {search:'applied', order:'applied'}).nodes().each(function (cell, i) {
+            cell.innerHTML = i + 1;
+        });
+    }).draw();
+    <?php endif; ?>
+});
 
+/**
+ * Open Change Request Modal
+ * @param {int} studentId - The student ID
+ * @param {string} studentName - The student's name
+ */
+function openChangeRequestModal(studentId, studentName) {
+    // Set student information in modal
+    $('#modal-student-id').val(studentId);
+    $('#modal-student-name').text(studentName);
+    
+    // Reset form fields
+    $('#field_name').val('').selectpicker('refresh');
+    $('#new_value').val('');
+    $('#reason').val('');
+    
+    // Show modal
+    $('#changeRequestModal').modal('show');
+}
+</script>
 <?php init_tail(); ?>

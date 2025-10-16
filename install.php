@@ -339,7 +339,7 @@ try {
     $categories = [
         ['name' => 'IDFC Bank', 'color_code' => '#dc3545', 'description' => 'IDFC Bank Branches', 'created_by' => 1, 'is_active' => 1],
         ['name' => 'HDFC Bank', 'color_code' => '#007bff', 'description' => 'HDFC Bank Branches', 'created_by' => 1, 'is_active' => 1],
-        ['name' => 'Safe Legal Solutions', 'color_code' => '#28a745', 'description' => 'Safe Legal Solutions Head Office', 'created_by' => 1, 'is_active' => 1],
+        ['name' => 'Safe Legal', 'color_code' => '#28a745', 'description' => 'Safe Legal Solutions Head Office', 'created_by' => 1, 'is_active' => 1],
     ];
     
     foreach ($categories as $cat) {
@@ -347,7 +347,7 @@ try {
         log_message('info', 'Inserted category: ' . $cat['name']);
     }
     
-    log_message('info', 'SUCCESS: 3 default categories inserted (IDFC Bank, HDFC Bank, Safe Legal Solutions)');
+    log_message('info', 'SUCCESS: 3 default categories inserted (IDFC Bank, HDFC Bank, Safe Legal )');
 } catch (Exception $e) {
     log_message('error', 'ERROR inserting categories: ' . $e->getMessage());
 }
@@ -362,7 +362,7 @@ try {
     $category_id = $sls_category ? $sls_category->id : 3;
     
     $default_branch_data = [
-        'category_id' => $category_id, // Safe Legal Solutions category
+        'category_id' => $category_id, // Safe Legal category
         'branch_name' => 'Head Office (Default)',
         'branch_code' => 'BR-DEFAULT',
         'location' => 'Central Office',
@@ -377,7 +377,7 @@ try {
     ];
     
     $CI->db->insert($table2, $default_branch_data);
-    log_message('info', 'SUCCESS: Default branch created with Safe Legal Solutions category (Branch ID: ' . $CI->db->insert_id() . ') - No manager assigned');
+    log_message('info', 'SUCCESS: Default branch created with Safe Legal category (Branch ID: ' . $CI->db->insert_id() . ') - No manager assigned');
 } catch (Exception $e) {
     log_message('error', 'ERROR creating default branch: ' . $e->getMessage());
 }
@@ -602,7 +602,7 @@ if ($all_ok && $category_count == 3 && $branch_count >= 1) {
     log_message('info', '  7. Package Enrollments (sls_package_enrollments)');
     log_message('info', '');
     log_message('info', 'Additional Setup:');
-    log_message('info', '  - 1 default branch created for admin under Safe Legal Solutions category');
+    log_message('info', '  - 1 default branch created for admin under Safe Legal category');
     log_message('info', '  - Registration tokens auto-generated for all branches');
     log_message('info', '  - Client account auto-creation enabled when payment is 100% complete');
     log_message('info', '  - Foreign key constraints properly configured');

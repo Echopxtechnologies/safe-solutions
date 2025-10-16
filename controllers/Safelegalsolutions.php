@@ -153,7 +153,7 @@ class Safelegalsolutions extends AdminController
     public function dashboard()
     {
         // Check permission
-        if (!has_permission('safelegalsolutions_students', '', 'view') && !is_sls_manager_or_admin()) {
+        if (!is_npm() && !is_sls_manager_or_admin()) {
             access_denied('safelegalsolutions');
         }
 
@@ -584,6 +584,10 @@ public function branch($id = '')
  * Get or Create SLS Nodal Partner Manager Role
  * FIXED VERSION with better error handling
  */
+/**
+ * Get or Create SLS Nodal Partner Manager Role
+ * FIXED: Auto-assign all necessary permissions
+ */
 private function get_or_create_sls_role()
 {
     $role_name = 'SLS Nodal Partner Manager';
@@ -599,17 +603,38 @@ private function get_or_create_sls_role()
             return $role->roleid;
         }
         
-        // Create the role with empty permissions
+        // ============================================================
+        // CREATE ROLE WITH PROPER PERMISSIONS
+        // ============================================================
+        
+        // Define permissions for NPM role
+        $permissions = [
+            // SLS Candidates - Full Access
+            'safelegalsolutions_students' => [
+                'view' => 1,
+                'create' => 1,
+                'edit' => 1
+                // NO delete permission
+            ],
+            
+            // SLS Branches - View & Edit Own Branch Only
+            'safelegalsolutions_branches' => [
+                'view' => 1,
+                'edit' => 1
+                // NO create/delete permission
+            ]
+        ];
+        
         $role_data = [
             'name' => $role_name,
-            'permissions' => serialize([])
+            'permissions' => serialize($permissions)
         ];
         
         $this->db->insert(db_prefix() . 'roles', $role_data);
         $role_id = $this->db->insert_id();
         
         if ($role_id) {
-            log_activity('SLS Nodal Partner Manager Role Created [Role ID: ' . $role_id . ']');
+            log_activity('SLS Nodal Partner Manager Role Created with Permissions [Role ID: ' . $role_id . ']');
             return $role_id;
         }
         
@@ -746,7 +771,7 @@ private function send_staff_credentials_email($email, $password, $firstname)
      */
     public function students()
     {
-        if (!has_permission('safelegalsolutions_students', '', 'view') && !is_sls_manager_or_admin()) {
+        if (!is_npm() && !is_sls_manager_or_admin()) {
             access_denied('safelegalsolutions');
         }
 
@@ -775,7 +800,7 @@ private function send_staff_credentials_email($email, $password, $firstname)
      */
     public function students_table()
     {
-        if (!has_permission('safelegalsolutions_students', '', 'view') && !is_sls_manager_or_admin()) {
+        if (!is_npm() && !is_sls_manager_or_admin()) {
             ajax_access_denied();
         }
 
@@ -787,8 +812,7 @@ private function send_staff_credentials_email($email, $password, $firstname)
      */
     public function student($id = '')
     {
-        if (!has_permission('safelegalsolutions_students', '', 'create') && 
-            !has_permission('safelegalsolutions_students', '', 'edit') && 
+        if (!is_npm() && 
             !is_sls_manager_or_admin()) {
             access_denied('safelegalsolutions');
         }
@@ -893,7 +917,7 @@ private function send_staff_credentials_email($email, $password, $firstname)
 
     // Debug log to verify data before insert
     log_activity('Student data before insert - item_id: ' . (isset($data['item_id']) ? $data['item_id'] : 'NULL') . ', total_amount: ' . (isset($data['total_amount']) ? $data['total_amount'] : '0.00'));
-    
+
     // Calculate payment percentage
     $amount_paid = isset($data['amount_paid']) ? floatval($data['amount_paid']) : 0;
     $total_amount = isset($data['total_amount']) ? floatval($data['total_amount']) : 0;
@@ -1428,4 +1452,305 @@ public function create_category_ajax()
         echo json_encode(['success' => false, 'message' => 'Invalid request']);
     }
 }
+
+
+/**
+ * ============================================================
+ * CHANGE REQUEST MANAGEMENT METHODS
+ * Add these methods to your Safelegalsolutions.php controller
+ * ============================================================
+ */
+
+/**
+ * Submit Change Request (AJAX)
+ * URL: /safelegalsolutions/submit_change_request
+ */
+public function submit_change_request()
+{
+    // Check if user is logged in
+    if (!is_npm() && !is_sls_manager_or_admin()) {
+        echo json_encode(['success' => false, 'message' => 'Access denied']);
+        return;
+    }
+    
+    if ($this->input->post()) {
+        $student_id = $this->input->post('student_id');
+        $field_name = $this->input->post('field_name');
+        $new_value = $this->input->post('new_value');
+        $reason = $this->input->post('reason');
+        
+        // Validation
+        if (empty($student_id) || empty($field_name) || empty($new_value) || empty($reason)) {
+            echo json_encode(['success' => false, 'message' => 'All fields are required']);
+            return;
+        }
+        
+        // Get student record
+        $student = $this->safelegalsolutions_model->get_student($student_id);
+        
+        if (!$student) {
+            echo json_encode(['success' => false, 'message' => 'Student not found']);
+            return;
+        }
+        
+        // Check if profile is locked
+        if ($student->is_locked != 1) {
+            echo json_encode(['success' => false, 'message' => 'Profile is not locked. You can edit directly.']);
+            return;
+        }
+        
+        // Check permission (NPM can only request for their students)
+        $staff_id = get_staff_user_id();
+        if (!is_sls_manager_or_admin() && $student->nodal_partner_manager_id != $staff_id) {
+            echo json_encode(['success' => false, 'message' => 'Access denied']);
+            return;
+        }
+        
+        // Get old value
+        $old_value = '';
+        if ($field_name === 'item_id') {
+            $old_value = $student->item_id;
+        } else if (property_exists($student, $field_name)) {
+            $old_value = $student->{$field_name};
+        }
+        
+        // Insert change request
+        $request_data = [
+            'student_id' => $student_id,
+            'requested_by' => $staff_id,
+            'field_name' => $field_name,
+            'old_value' => $old_value,
+            'new_value' => $new_value,
+            'reason' => $reason,
+            'status' => 'pending',
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+        
+        try {
+            $this->db->insert(db_prefix() . 'sls_change_requests', $request_data);
+            $request_id = $this->db->insert_id();
+            
+            if ($request_id) {
+                log_activity('Change Request Submitted [Request ID: ' . $request_id . ', Student ID: ' . $student_id . ', Field: ' . $field_name . ']');
+                
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Change request submitted successfully. An admin will review it soon.'
+                ]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to submit change request']);
+            }
+        } catch (Exception $e) {
+            log_activity('Change Request Submission Error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+    }
+}
+
+/**
+ * Change Requests List View (Admin/Manager Only)
+ * URL: /safelegalsolutions/change_requests
+ */
+public function change_requests()
+{
+    if (!is_sls_manager_or_admin()) {
+        access_denied('safelegalsolutions');
+    }
+    
+    $data['title'] = 'Change Requests';
+    
+    // Get filter parameter
+    $filter_student_id = $this->input->get('student_id');
+    $filter_status = $this->input->get('status');
+    
+    // Build query
+    $this->db->select(db_prefix() . 'sls_change_requests.*, ' .
+                     db_prefix() . 'sls_students.student_name, ' .
+                     db_prefix() . 'sls_students.email, ' .
+                     'requester.firstname as requester_firstname, ' .
+                     'requester.lastname as requester_lastname, ' .
+                     'reviewer.firstname as reviewer_firstname, ' .
+                     'reviewer.lastname as reviewer_lastname');
+    $this->db->from(db_prefix() . 'sls_change_requests');
+    $this->db->join(db_prefix() . 'sls_students', 
+                   db_prefix() . 'sls_students.id = ' . db_prefix() . 'sls_change_requests.student_id', 
+                   'left');
+    $this->db->join(db_prefix() . 'staff as requester', 
+                   'requester.staffid = ' . db_prefix() . 'sls_change_requests.requested_by', 
+                   'left');
+    $this->db->join(db_prefix() . 'staff as reviewer', 
+                   'reviewer.staffid = ' . db_prefix() . 'sls_change_requests.reviewed_by', 
+                   'left');
+    
+    // Apply filters
+    if ($filter_student_id) {
+        $this->db->where(db_prefix() . 'sls_change_requests.student_id', $filter_student_id);
+    }
+    if ($filter_status) {
+        $this->db->where(db_prefix() . 'sls_change_requests.status', $filter_status);
+    }
+    
+    $this->db->order_by(db_prefix() . 'sls_change_requests.created_at', 'DESC');
+    $data['change_requests'] = $this->db->get()->result();
+    
+    // Count by status
+    $this->db->where('status', 'pending');
+    $data['pending_count'] = $this->db->count_all_results(db_prefix() . 'sls_change_requests');
+    
+    $this->db->where('status', 'approved');
+    $data['approved_count'] = $this->db->count_all_results(db_prefix() . 'sls_change_requests');
+    
+    $this->db->where('status', 'rejected');
+    $data['rejected_count'] = $this->db->count_all_results(db_prefix() . 'sls_change_requests');
+    
+    $data['bodyclass'] = 'safelegalsolutions-change-requests';
+    $this->load->view('change_requests', $data);
+}
+
+/**
+ * Approve Change Request
+ * URL: /safelegalsolutions/approve_change_request/{id}
+ */
+public function approve_change_request($request_id)
+{
+    if (!is_sls_manager_or_admin()) {
+        ajax_access_denied();
+    }
+    
+    try {
+        // Get change request
+        $this->db->where('id', $request_id);
+        $request = $this->db->get(db_prefix() . 'sls_change_requests')->row();
+        
+        if (!$request) {
+            set_alert('danger', 'Change request not found');
+            redirect(admin_url('safelegalsolutions/change_requests'));
+            return;
+        }
+        
+        if ($request->status != 'pending') {
+            set_alert('warning', 'This change request has already been processed');
+            redirect(admin_url('safelegalsolutions/change_requests'));
+            return;
+        }
+        
+        // Get student
+        $student = $this->safelegalsolutions_model->get_student($request->student_id);
+        
+        if (!$student) {
+            set_alert('danger', 'Student not found');
+            redirect(admin_url('safelegalsolutions/change_requests'));
+            return;
+        }
+        
+        // Update student field
+        $update_data = [];
+        
+        if ($request->field_name === 'item_id') {
+            $update_data['item_id'] = $request->new_value;
+        } else {
+            $update_data[$request->field_name] = $request->new_value;
+        }
+        
+        // Apply the change
+        $this->db->where('id', $request->student_id);
+        $this->db->update(db_prefix() . 'sls_students', $update_data);
+        
+        // Update change request status
+        $this->db->where('id', $request_id);
+        $this->db->update(db_prefix() . 'sls_change_requests', [
+            'status' => 'approved',
+            'reviewed_by' => get_staff_user_id(),
+            'reviewed_at' => date('Y-m-d H:i:s')
+        ]);
+        
+        log_activity('Change Request Approved [Request ID: ' . $request_id . ', Student ID: ' . $request->student_id . ', Field: ' . $request->field_name . ']');
+        
+        set_alert('success', 'Change request approved and applied successfully');
+        
+    } catch (Exception $e) {
+        log_activity('Change Request Approval Error: ' . $e->getMessage());
+        set_alert('danger', 'Error approving change request: ' . $e->getMessage());
+    }
+    
+    redirect(admin_url('safelegalsolutions/change_requests'));
+}
+
+/**
+ * Reject Change Request
+ * URL: /safelegalsolutions/reject_change_request/{id}
+ */
+public function reject_change_request($request_id)
+{
+    if (!is_sls_manager_or_admin()) {
+        ajax_access_denied();
+    }
+    
+    if ($this->input->post()) {
+        $review_notes = $this->input->post('review_notes');
+        
+        try {
+            // Get change request
+            $this->db->where('id', $request_id);
+            $request = $this->db->get(db_prefix() . 'sls_change_requests')->row();
+            
+            if (!$request) {
+                echo json_encode(['success' => false, 'message' => 'Change request not found']);
+                return;
+            }
+            
+            if ($request->status != 'pending') {
+                echo json_encode(['success' => false, 'message' => 'This request has already been processed']);
+                return;
+            }
+            
+            // Update change request status
+            $this->db->where('id', $request_id);
+            $this->db->update(db_prefix() . 'sls_change_requests', [
+                'status' => 'rejected',
+                'reviewed_by' => get_staff_user_id(),
+                'reviewed_at' => date('Y-m-d H:i:s'),
+                'review_notes' => $review_notes
+            ]);
+            
+            log_activity('Change Request Rejected [Request ID: ' . $request_id . ', Student ID: ' . $request->student_id . ']');
+            
+            echo json_encode(['success' => true, 'message' => 'Change request rejected']);
+            
+        } catch (Exception $e) {
+            log_activity('Change Request Rejection Error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid request']);
+    }
+}
+
+/**
+ * Delete Change Request
+ * URL: /safelegalsolutions/delete_change_request/{id}
+ */
+public function delete_change_request($request_id)
+{
+    if (!is_sls_manager_or_admin()) {
+        ajax_access_denied();
+    }
+    
+    try {
+        $this->db->where('id', $request_id);
+        $this->db->delete(db_prefix() . 'sls_change_requests');
+        
+        log_activity('Change Request Deleted [Request ID: ' . $request_id . ']');
+        
+        set_alert('success', 'Change request deleted successfully');
+    } catch (Exception $e) {
+        log_activity('Change Request Deletion Error: ' . $e->getMessage());
+        set_alert('danger', 'Error deleting change request');
+    }
+    
+    redirect(admin_url('safelegalsolutions/change_requests'));
+}
+
 }

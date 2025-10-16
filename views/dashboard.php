@@ -437,13 +437,13 @@
                     </label>
                     <div class="row">
                         <div class="col-xs-6 col-sm-3" style="margin-bottom: 10px;">
-                            <a href="https://wa.me/?text=<?php echo urlencode('Register for Safe Legal Solutions: ' . site_url('safelegalsolutions/safelegalsolutions_client/register/' . $branch->registration_token)); ?>" 
+                            <a href="https://wa.me/?text=<?php echo urlencode('Register for Safe Legal : ' . site_url('safelegalsolutions/safelegalsolutions_client/register/' . $branch->registration_token)); ?>" 
                                target="_blank" class="btn btn-success btn-block btn-lg" style="padding: 15px; font-size: 15px;">
                                 <i class="fa fa-whatsapp"></i> WhatsApp
                             </a>
                         </div>
                         <div class="col-xs-6 col-sm-3" style="margin-bottom: 10px;">
-                            <a href="mailto:?subject=<?php echo urlencode('Candidate Registration - Safe Legal Solutions'); ?>&body=<?php echo urlencode('Click this link to register: ' . site_url('safelegalsolutions/safelegalsolutions_client/register/' . $branch->registration_token)); ?>" 
+                            <a href="mailto:?subject=<?php echo urlencode('Candidate Registration - Safe Legal '); ?>&body=<?php echo urlencode('Click this link to register: ' . site_url('safelegalsolutions/safelegalsolutions_client/register/' . $branch->registration_token)); ?>" 
                                class="btn btn-info btn-block btn-lg" style="padding: 15px; font-size: 15px;">
                                 <i class="fa fa-envelope"></i> Email
                             </a>
@@ -530,13 +530,13 @@
                     </label>
                     <div class="row">
                         <div class="col-xs-6 col-sm-3" style="margin-bottom: 10px;">
-                            <a href="https://wa.me/?text=<?php echo urlencode('Register for Safe Legal Solutions: ' . site_url('safelegalsolutions/safelegalsolutions_client/register/' . $default_branch->registration_token)); ?>" 
+                            <a href="https://wa.me/?text=<?php echo urlencode('Register for Safe Legal : ' . site_url('safelegalsolutions/safelegalsolutions_client/register/' . $default_branch->registration_token)); ?>" 
                                target="_blank" class="btn btn-success btn-block btn-lg" style="padding: 15px; font-size: 15px;">
                                 <i class="fa fa-whatsapp"></i> WhatsApp
                             </a>
                         </div>
                         <div class="col-xs-6 col-sm-3" style="margin-bottom: 10px;">
-                            <a href="mailto:?subject=<?php echo urlencode('Candidate Registration - Safe Legal Solutions'); ?>&body=<?php echo urlencode('Click this link to register: ' . site_url('safelegalsolutions/safelegalsolutions_client/register/' . $default_branch->registration_token)); ?>" 
+                            <a href="mailto:?subject=<?php echo urlencode('Candidate Registration - Safe Legal '); ?>&body=<?php echo urlencode('Click this link to register: ' . site_url('safelegalsolutions/safelegalsolutions_client/register/' . $default_branch->registration_token)); ?>" 
                                class="btn btn-info btn-block btn-lg" style="padding: 15px; font-size: 15px;">
                                 <i class="fa fa-envelope"></i> Email
                             </a>
