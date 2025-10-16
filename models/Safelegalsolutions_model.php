@@ -409,7 +409,7 @@ private $table_enrollments;
         return $this->get_students([], $limit);
     }
 
-   /**
+ /**
  * Add new student
  * @param array $data
  * @return int|bool Insert ID or false
@@ -433,20 +433,37 @@ public function add_student($data)
         }
     }
     
-    // Calculate profile completion
-    $data['profile_completion'] = $this->calculate_profile_completion($data);
+    // ============================================================
+    // SET DEFAULT VALUES (FIX FOR EMPTY STATUS)
+    // ============================================================
+    if (!isset($data['status']) || empty($data['status'])) {
+        $data['status'] = 'draft';
+    }
     
+    if (!isset($data['is_locked']) || $data['is_locked'] === '') {
+        $data['is_locked'] = 0;
+    }
+    
+    if (!isset($data['profile_completion']) || $data['profile_completion'] === '') {
+        $data['profile_completion'] = $this->calculate_profile_completion($data);
+    } else {
+        // Recalculate anyway
+        $data['profile_completion'] = $this->calculate_profile_completion($data);
+    }
+    
+    // ============================================================
+    // INSERT STUDENT
+    // ============================================================
     $this->db->insert($this->table_students, $data);
     $insert_id = $this->db->insert_id();
     
     if ($insert_id) {
-        log_activity('New Student Added [ID: ' . $insert_id . ', Name: ' . $data['student_name'] . ']');
+        log_activity('New Student Added [ID: ' . $insert_id . ', Name: ' . $data['student_name'] . ', Status: ' . $data['status'] . ']');
         return $insert_id;
     }
     
     return false;
 }
-
    /**
  * Update student
  * @param int $id

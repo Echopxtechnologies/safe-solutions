@@ -11,7 +11,7 @@
                 </h3>
             </div>
             <div class="col-md-2 text-right">
-                <a href="<?php echo site_url('clients/safelegalsolutions_client/my_dashboard'); ?>" 
+                <a href="https://safelegalsolutions.erpblr.in/safelegalsolutions/safelegalsolutions_client/my_dashboard" 
                    class="btn btn-default">
                     <i class="fa fa-arrow-left"></i> Back to Dashboard
                 </a>
@@ -39,13 +39,14 @@
                                         'draft' => 'Draft',
                                         'pending_review' => 'Under Review',
                                         'approved' => 'Approved',
+                                        'active' => 'Active',
                                         'locked' => 'Approved & Verified'
                                     ];
                                     echo $status_display[$student->status] ?? ucfirst($student->status);
                                 ?></strong>
                             </h4>
                             <p style="margin-bottom: 0;">
-                                <?php if ($student->status == 'approved' || $student->status == 'locked'): ?>
+                                <?php if ($student->status == 'approved' || $student->status == 'locked' || $student->status == 'active'): ?>
                                     Your profile has been approved and verified by our team.
                                 <?php elseif ($student->status == 'pending_review'): ?>
                                     Your profile is currently under review. We'll notify you once it's approved.
@@ -108,6 +109,12 @@
                                                 </a>
                                             </td>
                                         </tr>
+                                        <tr>
+                                            <td style="font-weight: bold; background: #f8f9fa;">
+                                                <i class="fa fa-calendar"></i> Date of Birth
+                                            </td>
+                                            <td><?php echo date('d M Y', strtotime($student->date_of_birth)); ?></td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -117,21 +124,31 @@
                                     <tbody>
                                         <tr>
                                             <td style="width: 40%; font-weight: bold; background: #f8f9fa;">
-                                                <i class="fa fa-calendar"></i> Date of Birth
-                                            </td>
-                                            <td><?php echo date('d M Y', strtotime($student->date_of_birth)); ?></td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-weight: bold; background: #f8f9fa;">
                                                 <i class="fa fa-map-marker"></i> Address
                                             </td>
                                             <td><?php echo nl2br(htmlspecialchars($student->address)); ?></td>
                                         </tr>
                                         <tr>
                                             <td style="font-weight: bold; background: #f8f9fa;">
+                                                <i class="fa fa-passport"></i> Passport Number
+                                            </td>
+                                            <td>
+                                                <code><?php echo !empty($student->passport_number) ? htmlspecialchars($student->passport_number) : 'Not Provided'; ?></code>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight: bold; background: #f8f9fa;">
                                                 <i class="fa fa-barcode"></i> Student ID
                                             </td>
-                                            <td><code>#<?php echo str_pad($student->id, 6, '0', STR_PAD_LEFT); ?></code></td>
+                                            <td>
+                                                <code><?php echo !empty($student->unique_id) ? htmlspecialchars($student->unique_id) : 'saflg-' . str_pad($student->id, 5, '0', STR_PAD_LEFT); ?></code>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight: bold; background: #f8f9fa;">
+                                                <i class="fa fa-calendar-check-o"></i> Registration Date
+                                            </td>
+                                            <td><?php echo date('d M Y', strtotime($student->created_at)); ?></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -142,41 +159,13 @@
             </div>
         </div>
 
-        <!-- Course & Branch Information -->
+        <!-- Branch & Package Information -->
         <div class="row">
-            <div class="col-md-6">
-                <div class="panel panel-success">
-                    <div class="panel-heading">
-                        <h4 class="panel-title">
-                            <i class="fa fa-graduation-cap"></i> Course Information
-                        </h4>
-                    </div>
-                    <div class="panel-body">
-                        <table class="table table-bordered">
-                            <tbody>
-                                <tr>
-                                    <td style="width: 45%; font-weight: bold; background: #f8f9fa;">
-                                        <i class="fa fa-book"></i> Course Applied
-                                    </td>
-                                    
-                                </tr>
-                                <tr>
-                                    <td style="font-weight: bold; background: #f8f9fa;">
-                                        <i class="fa fa-calendar-check-o"></i> Registration Date
-                                    </td>
-                                    <td><?php echo date('d M Y', strtotime($student->created_at)); ?></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
             <div class="col-md-6">
                 <div class="panel panel-info">
                     <div class="panel-heading">
                         <h4 class="panel-title">
-                            <i class="fa fa-building"></i> Partner Details
+                            <i class="fa fa-building"></i> Branch Details
                         </h4>
                     </div>
                     <div class="panel-body">
@@ -190,18 +179,21 @@
                                         <strong><?php echo htmlspecialchars($branch->branch_name); ?></strong>
                                         <?php if (!empty($branch->category_name)): ?>
                                             <br>
-                                            <span class="badge" style="background: <?php echo $branch->color_code; ?>; margin-top: 5px;">
+                                            <span class="badge" style="background: <?php echo $branch->color_code ?? '#007bff'; ?>; margin-top: 5px;">
                                                 <?php echo htmlspecialchars($branch->category_name); ?>
                                             </span>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
+                                <?php if (!empty($branch->location)): ?>
                                 <tr>
                                     <td style="font-weight: bold; background: #f8f9fa;">
                                         <i class="fa fa-map-marker"></i> Location
                                     </td>
                                     <td><?php echo htmlspecialchars($branch->location); ?></td>
                                 </tr>
+                                <?php endif; ?>
+                                <?php if (!empty($branch->contact_phone)): ?>
                                 <tr>
                                     <td style="font-weight: bold; background: #f8f9fa;">
                                         <i class="fa fa-phone"></i> Contact
@@ -212,8 +204,51 @@
                                         </a>
                                     </td>
                                 </tr>
+                                <?php endif; ?>
+                                <?php if (!empty($branch->address)): ?>
+                                <tr>
+                                    <td style="font-weight: bold; background: #f8f9fa;">
+                                        <i class="fa fa-location-arrow"></i> Address
+                                    </td>
+                                    <td><?php echo nl2br(htmlspecialchars($branch->address)); ?></td>
+                                </tr>
+                                <?php endif; ?>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="panel panel-success">
+                    <div class="panel-heading">
+                        <h4 class="panel-title">
+                            <i class="fa fa-percent"></i> Profile Metrics
+                        </h4>
+                    </div>
+                    <div class="panel-body">
+                        <div style="margin-bottom: 25px;">
+                            <h5 style="margin: 0 0 10px 0;">
+                                <i class="fa fa-check-circle"></i> Profile Completion
+                            </h5>
+                            <div class="progress" style="height: 30px;">
+                                <div class="progress-bar progress-bar-<?php echo ($student->profile_completion == 100) ? 'success' : 'warning'; ?>" 
+                                     style="width: <?php echo $student->profile_completion; ?>%; line-height: 30px; font-size: 16px;">
+                                    <?php echo $student->profile_completion; ?>%
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 25px;">
+                            <h5 style="margin: 0 0 10px 0;">
+                                <i class="fa fa-credit-card"></i> Payment Status
+                            </h5>
+                            <div class="alert alert-<?php echo (isset($student->payment_status) && $student->payment_status == 'paid') ? 'success' : 'warning'; ?>" style="margin-bottom: 0; padding: 15px; text-align: center;">
+                                <strong style="font-size: 18px;">
+                                    <?php echo (isset($student->payment_status) && $student->payment_status == 'paid') ? 'FULLY PAID' : 'PAYMENT PENDING'; ?>
+                                </strong>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -341,15 +376,12 @@
                                         </tr>
                                         <tr>
                                             <td style="font-weight: bold; background: #f8f9fa;">
-                                                <i class="fa fa-percent"></i> Payment Progress
+                                                <i class="fa fa-rupee"></i> Amount Paid
                                             </td>
                                             <td>
-                                                <?php $payment_pct = isset($student->payment_percentage) ? $student->payment_percentage : 0; ?>
-                                                <div class="progress" style="margin-bottom: 5px;">
-                                                    <div class="progress-bar progress-bar-success" style="width: <?php echo $payment_pct; ?>%;">
-                                                        <?php echo $payment_pct; ?>%
-                                                    </div>
-                                                </div>
+                                                <strong style="color: #28a745; font-size: 18px;">
+                                                    ₹<?php echo isset($student->amount_paid) ? number_format($student->amount_paid, 2) : '0.00'; ?>
+                                                </strong>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -361,21 +393,26 @@
                                     <tbody>
                                         <tr>
                                             <td style="width: 45%; font-weight: bold; background: #f8f9fa;">
-                                                <i class="fa fa-rupee"></i> Amount Paid
-                                            </td>
-                                            <td>
-                                                <strong style="color: #28a745; font-size: 18px;">
-                                                    ₹<?php echo isset($student->amount_paid) ? number_format($student->amount_paid, 2) : '0.00'; ?>
-                                                </strong>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-weight: bold; background: #f8f9fa;">
                                                 <i class="fa fa-money"></i> Total Amount
                                             </td>
                                             <td>
                                                 <strong style="font-size: 18px;">
                                                     ₹<?php echo isset($student->total_amount) ? number_format($student->total_amount, 2) : ($item ? number_format($item->total_price, 2) : '0.00'); ?>
+                                                </strong>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight: bold; background: #f8f9fa;">
+                                                <i class="fa fa-calculator"></i> Balance Due
+                                            </td>
+                                            <td>
+                                                <?php 
+                                                $total = isset($student->total_amount) ? $student->total_amount : ($item ? $item->total_price : 0);
+                                                $paid = isset($student->amount_paid) ? $student->amount_paid : 0;
+                                                $balance = $total - $paid;
+                                                ?>
+                                                <strong style="font-size: 18px; color: <?php echo $balance > 0 ? '#dc3545' : '#28a745'; ?>;">
+                                                    ₹<?php echo number_format($balance, 2); ?>
                                                 </strong>
                                             </td>
                                         </tr>
@@ -461,19 +498,10 @@
         <!-- Action Buttons -->
         <div class="row">
             <div class="col-md-12 text-center" style="margin-top: 20px;">
-                <a href="<?php echo site_url('clients/safelegalsolutions_client/my_dashboard'); ?>" 
+                <a href="https://safelegalsolutions.erpblr.in/safelegalsolutions/safelegalsolutions_client/my_dashboard" 
                    class="btn btn-primary btn-lg">
                     <i class="fa fa-dashboard"></i> Back to Dashboard
                 </a>
-                
-                <a href="<?php echo site_url('clients/tickets/new_ticket'); ?>" 
-                   class="btn btn-success btn-lg">
-                    <i class="fa fa-ticket"></i> Contact Support
-                </a>
-                
-                <button onclick="window.print();" class="btn btn-default btn-lg">
-                    <i class="fa fa-print"></i> Print Profile
-                </button>
             </div>
         </div>
 

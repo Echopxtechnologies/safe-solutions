@@ -19,11 +19,11 @@
             <div class="col-md-3 col-sm-6">
                 <div class="panel" style="border-left: 4px solid #6f42c1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                     <div class="panel-body text-center" style="padding: 20px; color: white;">
-                        <h4 style="margin: 0 0 5px 0; font-size: 14px; opacity: 0.9;">Student ID</h4>
-                        <h2 style="margin: 0; font-size: 20px; font-weight: bold; font-family: monospace; letter-spacing: 2px;">
+                        <h4 style="margin: 0 0 5px 0; font-size: 14px; opacity: 0.9; color:black;">Student ID</h4>
+                        <h2 style="margin: 0; font-size: 20px; font-weight: bold; font-family: monospace; letter-spacing: 2px; color:#6f42c1; ">
                             <?php echo !empty($student->unique_id) ? htmlspecialchars($student->unique_id) : 'N/A'; ?>
                         </h2>
-                        <small style="opacity: 0.8; font-size: 11px;">Unique Identifier</small>
+                        <small style="opacity: 0.8; font-size: 11px; color:grey;">Unique Identifier</small>
                     </div>
                 </div>
             </div>
@@ -49,10 +49,7 @@
                         <h2 style="margin: 0; font-size: 24px; font-weight: bold; color: <?php echo ($student->profile_completion == 100) ? '#28a745' : '#ffc107'; ?>;">
                             <?php echo isset($student->profile_completion) ? $student->profile_completion : 0; ?>%
                         </h2>
-                        <div class="progress" style="margin-top: 10px; height: 6px;">
-                            <div class="progress-bar <?php echo ($student->profile_completion == 100) ? 'progress-bar-success' : 'progress-bar-warning'; ?>" 
-                                 style="width: <?php echo isset($student->profile_completion) ? $student->profile_completion : 0; ?>%;"></div>
-                        </div>
+                        
                     </div>
                 </div>
             </div>
@@ -75,11 +72,32 @@
                             }
                             ?>
                         </h2>
-                        <?php if (isset($student->payment_percentage) && $student->payment_percentage > 0): ?>
-                            <small style="color: #666; font-size: 11px;">
-                                <?php echo number_format($student->payment_percentage, 0); ?>% Complete
-                            </small>
-                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Days Since Registration Card -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="alert alert-info" style="border-left: 5px solid #17a2b8;">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h4 style="margin-top: 0;">
+                                <i class="fa fa-calendar"></i> 
+                                You've been with us for 
+                                <strong><?php echo $days_since_registration; ?> days</strong>
+                            </h4>
+                            <p style="margin-bottom: 0;">
+                                Registration Date: <strong><?php echo date('d M Y', strtotime($student->created_at)); ?></strong>
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-right">
+                            <div style="font-size: 48px; color: #17a2b8; line-height: 1;">
+                                <?php echo $days_since_registration; ?>
+                            </div>
+                            <small style="color: #666;">DAYS</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -147,26 +165,7 @@
                             </div>
                         </div>
 
-                        <!-- Progress Bar -->
-                        <?php if ($days_until_end >= 0): ?>
-                        <?php 
-                        $start = new DateTime($enrollment->start_date);
-                        $end = new DateTime($enrollment->end_date);
-                        $today = new DateTime();
-                        $total_days = $start->diff($end)->days;
-                        $elapsed_days = $start->diff($today)->days;
-                        $progress = ($total_days > 0) ? min(100, ($elapsed_days / $total_days) * 100) : 0;
-                        ?>
-                        <div style="margin-top: 20px;">
-                            <div class="progress" style="height: 25px; border-radius: 12px; background: #e0e0e0;">
-                                <div class="progress-bar progress-bar-success progress-bar-striped active" 
-                                     style="width: <?php echo $progress; ?>%; line-height: 25px; font-size: 14px; font-weight: bold;">
-                                    <?php echo number_format($progress, 1); ?>% Complete
-                                </div>
-                            </div>
-                        </div>
-                        <?php endif; ?>
-                    </div>
+                                            </div>
                 </div>
             </div>
         </div>
@@ -190,6 +189,7 @@
                                 'draft' => 'Draft',
                                 'pending_review' => 'Under Review',
                                 'approved' => 'Approved',
+                                'active' => 'Active',
                                 'locked' => 'Approved & Verified'
                             ];
                             echo $status_display[$student->status] ?? ucfirst($student->status);
@@ -215,25 +215,11 @@
                     </div>
                     <div class="panel-body">
                         <div class="row">
-                            <div class="col-md-4 col-sm-6 text-center" style="margin-bottom: 15px;">
-                                <a href="<?php echo site_url('clients/safelegalsolutions_client/my_profile'); ?>" 
-                                   class="btn btn-primary btn-block btn-lg">
+                            <div class="col-md-12 text-center">
+                                <a href="https://safelegalsolutions.erpblr.in/safelegalsolutions/safelegalsolutions_client/my_profile" 
+                                   class="btn btn-primary btn-lg" style="min-width: 250px;">
                                     <i class="fa fa-user fa-2x" style="display: block; margin-bottom: 10px;"></i>
                                     View Full Profile
-                                </a>
-                            </div>
-                            
-                            <div class="col-md-4 col-sm-6 text-center" style="margin-bottom: 15px;">
-                                <a href="<?php echo site_url('clients/tickets'); ?>" class="btn btn-info btn-block btn-lg">
-                                    <i class="fa fa-ticket fa-2x" style="display: block; margin-bottom: 10px;"></i>
-                                    Support Tickets
-                                </a>
-                            </div>
-                            
-                            <div class="col-md-4 col-sm-6 text-center" style="margin-bottom: 15px;">
-                                <a href="<?php echo site_url('clients/safelegalsolutions_client/referral_card'); ?>" class="btn btn-warning btn-block btn-lg">
-                                    <i class="fa fa-share-alt fa-2x" style="display: block; margin-bottom: 10px;"></i>
-                                    Referral Card
                                 </a>
                             </div>
                         </div>
@@ -269,12 +255,15 @@
                                         <?php endif; ?>
                                     </td>
                                 </tr>
+                                <?php if (!empty($branch->location)): ?>
                                 <tr>
                                     <td style="font-weight: bold;">
                                         <i class="fa fa-map-marker"></i> Location
                                     </td>
                                     <td><?php echo htmlspecialchars($branch->location); ?></td>
                                 </tr>
+                                <?php endif; ?>
+                                <?php if (!empty($branch->contact_phone)): ?>
                                 <tr>
                                     <td style="font-weight: bold;">
                                         <i class="fa fa-phone"></i> Contact
@@ -285,6 +274,7 @@
                                         </a>
                                     </td>
                                 </tr>
+                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>

@@ -2,31 +2,17 @@
 defined('BASEPATH') or exit('No direct script access allowed');
 
 /**
- * SafeLegalSolutions Client Controller
+ * SafeLegalSolutions Client Controller - FIXED VERSION
  * 
- * PURPOSE:
- * - Handles public student registration (no auth required)
- * - Manages authenticated client portal access
- * 
- * ARCHITECTURE:
- * - Extends ClientsController for client portal integration
- * - Mixed authentication: Public methods + Authenticated methods
- * - Session-based multi-step registration workflow
- * 
- * VERSION: 4.0 - Restructured with comprehensive error handling
- * FILE: modules/safelegalsolutions/controllers/Safelegalsolutions_client.php
- * 
- * CHANGELOG v4.0:
- * - Comprehensive restructuring and organization
- * - Added try-catch error handling throughout
- * - Improved logging and error reporting
- * - Better method grouping and documentation
- * - All existing functionality preserved
+ * CORRECT PAYMENT FLOW:
+ * 1. Register → Create Student Record (NO client account)
+ * 2. Review → Show payment button
+ * 3. Purchase → Create temporary client for invoice → Redirect to Razorpay
+ * 4. Payment Success → Create REAL client account + Send credentials email
+ * 5. Payment Failure → Delete student + temporary client
  * 
  * @package    SafeLegalSolutions
- * @author     Your Company
- * @copyright  2025
- * @version    4.0
+ * @version    5.1 - FIXED
  */
 class Safelegalsolutions_client extends ClientsController
 {
@@ -34,41 +20,21 @@ class Safelegalsolutions_client extends ClientsController
     // CLASS PROPERTIES
     // ================================================================
     
-    /**
-     * @var array Public methods that don't require authentication
-     */
-    private $public_methods = ['index', 'register', 'review', 'success'];
-    
-    /**
-     * @var string Error log prefix for consistent logging
-     */
+    private $public_methods = ['index', 'register', 'review', 'success', 'purchase', 'payment_success', 'payment_failure'];
     private $log_prefix = 'SafeLegalSolutions Client Controller';
 
     // ================================================================
     // CONSTRUCTOR & INITIALIZATION
     // ================================================================
     
-    /**
-     * Constructor - Initialize controller and check authentication
-     * 
-     * WORKFLOW:
-     * 1. Call parent constructor
-     * 2. Load required models and libraries
-     * 3. Check if current method requires authentication
-     * 4. Redirect to login if authentication required and user not logged in
-     * 
-     * @return void
-     */
     public function __construct()
     {
         try {
             parent::__construct();
             
-            // Load dependencies
             $this->_load_dependencies();
-            
-            // Check authentication for protected methods
             $this->_check_authentication();
+            $this->_disable_csrf_for_callbacks();
             
         } catch (Exception $e) {
             log_activity($this->log_prefix . ' - Constructor Error: ' . $e->getMessage());
@@ -76,18 +42,16 @@ class Safelegalsolutions_client extends ClientsController
         }
     }
     
-    /**
-     * Load required models and libraries
-     * 
-     * @return void
-     * @throws Exception If loading fails
-     */
     private function _load_dependencies()
     {
         try {
             $this->load->model('safelegalsolutions/safelegalsolutions_client_model');
+            $this->load->model('clients_model');
+            $this->load->model('invoices_model');
+            $this->load->model('payments_model');
             $this->load->library('form_validation');
             $this->load->library('session');
+            $this->load->helper('string'); // For random password generation
             
         } catch (Exception $e) {
             log_activity($this->log_prefix . ' - Dependency Loading Error: ' . $e->getMessage());
@@ -95,17 +59,11 @@ class Safelegalsolutions_client extends ClientsController
         }
     }
     
-    /**
-     * Check if authentication is required for current method
-     * 
-     * @return void
-     */
     private function _check_authentication()
     {
         try {
             $method = $this->router->fetch_method();
             
-            // If NOT a public method AND user not logged in
             if (!in_array($method, $this->public_methods) && !is_client_logged_in()) {
                 redirect(site_url('authentication/login'));
             }
@@ -115,19 +73,28 @@ class Safelegalsolutions_client extends ClientsController
             redirect(site_url('authentication/login'));
         }
     }
-
-    // ================================================================
-    // PUBLIC REGISTRATION METHODS (NO AUTHENTICATION REQUIRED)
-    // ================================================================
     
     /**
-     * Index - Default landing page
-     * 
-     * Redirects to registration with optional token
-     * 
-     * @param string $token Optional branch registration token
-     * @return void
+     * Disable CSRF for payment callback methods
      */
+    private function _disable_csrf_for_callbacks()
+    {
+        $csrf_exempt_methods = [
+            'payment_success',
+            'payment_failure',
+            'razorpay_webhook'
+        ];
+        
+        if (in_array($this->router->method, $csrf_exempt_methods)) {
+            $this->security->csrf_show_error = false;
+            $this->config->set_item('csrf_protection', false);
+        }
+    }
+
+    // ================================================================
+    // PUBLIC REGISTRATION METHODS
+    // ================================================================
+    
     public function index($token = '')
     {
         $this->register($token);
@@ -135,28 +102,17 @@ class Safelegalsolutions_client extends ClientsController
     
     /**
      * STEP 1: Registration Form
-     * 
-     * WORKFLOW:
-     * 1. Validate branch token (or get default branch)
-     * 2. Load active packages
-     * 3. Display form OR process submission
-     * 
-     * URL: /safelegalsolutions/safelegalsolutions_client/register/{token}
-     * 
-     * @param string $token Optional branch registration token
-     * @return void
+     * Creates student record immediately (WITHOUT client account)
      */
     public function register($token = '')
     {
         try {
-            // Get and validate branch
             $branch = $this->_get_and_validate_branch($token);
             
             if (!$branch) {
-                return; // Error already handled
+                return;
             }
             
-            // Get available packages
             $items = $this->_get_active_items();
             
             if (!$items) {
@@ -167,13 +123,11 @@ class Safelegalsolutions_client extends ClientsController
                 return;
             }
             
-            // Handle form submission
             if ($this->input->server('REQUEST_METHOD') === 'POST') {
                 $this->_process_registration_step1($branch, $token, $items);
                 return;
             }
             
-            // Display registration form
             $this->_display_registration_form($branch, $token, $items);
             
         } catch (Exception $e) {
@@ -187,20 +141,10 @@ class Safelegalsolutions_client extends ClientsController
     
     /**
      * STEP 2: Review & Payment Page
-     * 
-     * WORKFLOW:
-     * 1. Validate session data exists
-     * 2. Load branch and package info
-     * 3. Display review page OR process payment completion
-     * 
-     * URL: /safelegalsolutions/safelegalsolutions_client/review
-     * 
-     * @return void
      */
     public function review()
     {
         try {
-            // Get registration data from session
             $registration_data = $this->session->userdata('registration_data');
             
             if (empty($registration_data)) {
@@ -208,22 +152,29 @@ class Safelegalsolutions_client extends ClientsController
                 return;
             }
             
-            // Validate branch and item
             $branch = $this->_validate_review_branch($registration_data);
             $item = $this->_validate_review_item($registration_data);
             
             if (!$branch || !$item) {
-                return; // Error already handled
-            }
-            
-            // Handle payment completion
-            if ($this->input->server('REQUEST_METHOD') === 'POST') {
-                $this->_complete_registration($registration_data, $branch, $item);
                 return;
             }
             
-            // Display review page
-            $this->_display_review_page($registration_data, $branch, $item);
+            // Check if student already created
+            $student_id = $this->session->userdata('temp_student_id');
+            
+            if (!$student_id) {
+                // Create student record (WITHOUT client account)
+                $student_id = $this->_create_temp_student($registration_data, $branch, $item);
+                
+                if (!$student_id) {
+                    $this->_show_error('Registration Error', 'Failed to create student record. Please try again.');
+                    return;
+                }
+                
+                $this->session->set_userdata('temp_student_id', $student_id);
+            }
+            
+            $this->_display_review_page($registration_data, $branch, $item, $student_id);
             
         } catch (Exception $e) {
             log_activity($this->log_prefix . ' - Review Error: ' . $e->getMessage());
@@ -235,40 +186,850 @@ class Safelegalsolutions_client extends ClientsController
     }
     
     /**
-     * STEP 3: Success Page
-     * 
-     * WORKFLOW:
-     * 1. Validate student ID
-     * 2. Load student, branch, and item data
-     * 3. Check for client account creation status
-     * 4. Display success page with appropriate messages
-     * 
-     * URL: /safelegalsolutions/safelegalsolutions_client/success/{student_id}
-     * 
-     * @param int $student_id Student record ID
-     * @return void
+     * Create temporary student record (NO client account yet)
      */
+    private function _create_temp_student($registration_data, $branch, $item)
+    {
+        try {
+            $unique_id = $this->_generate_unique_id($registration_data['passport_number']);
+            $profile_completion = $this->_calculate_profile_completion($registration_data);
+            $referral_code = $this->_generate_referral_code();
+            
+            $insert_data = [
+                'branch_id'                  => $branch->id,
+                'nodal_partner_manager_id'   => $branch->nodal_partner_manager_id,
+                'created_by'                 => $branch->nodal_partner_manager_id ?? 1,
+                'student_name'               => $registration_data['student_name'],
+                'email'                      => $registration_data['email'],
+                'phone'                      => $registration_data['phone'],
+                'address'                    => $registration_data['address'],
+                'date_of_birth'              => $registration_data['date_of_birth'],
+                'passport_number'            => strtoupper($registration_data['passport_number']),
+                'unique_id'                  => $unique_id,
+                'item_id'                    => $registration_data['item_id'],
+                'payment_status'             => 'unpaid',
+                'payment_percentage'         => 0,
+                'amount_paid'                => 0.00,
+                'total_amount'               => $item->total_price,
+                'referral_code'              => $referral_code,
+                'status'                     => 'draft',
+                'profile_completion'         => $profile_completion,
+                'earnings'                   => '0.00',
+                'notes'                      => 'Temporary record - Awaiting payment',
+                'is_locked'                  => 0,
+                'client_id'                  => NULL, // Will be set after payment success
+                'client_created_at'          => NULL
+            ];
+            
+            $student_id = $this->safelegalsolutions_client_model->add_student($insert_data);
+            
+            if ($student_id) {
+                log_activity($this->log_prefix . ' - Temporary student created [ID: ' . $student_id . ', Email: ' . $registration_data['email'] . '] - Awaiting payment');
+            }
+            
+            return $student_id;
+            
+        } catch (Exception $e) {
+            log_activity($this->log_prefix . ' - Create Temp Student Error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    // ================================================================
+    // PAYMENT PROCESSING METHODS
+    // ================================================================
+    
+    /**
+     * Initiate payment process
+     * Creates invoice with temporary client and redirects to Razorpay
+     */
+    public function purchase()
+    {
+        try {
+            $student_id = $this->session->userdata('temp_student_id');
+            
+            if (!$student_id) {
+                set_alert('danger', 'Invalid session. Please start registration again.');
+                redirect('safelegalsolutions/safelegalsolutions_client/register');
+                return;
+            }
+            
+            $student = $this->safelegalsolutions_client_model->get_student($student_id);
+            
+            if (!$student) {
+                set_alert('danger', 'Student record not found.');
+                redirect('safelegalsolutions/safelegalsolutions_client/register');
+                return;
+            }
+            
+            $item = $this->safelegalsolutions_client_model->get_item($student->item_id);
+            
+            if (!$item) {
+                set_alert('danger', 'Package not found.');
+                redirect('safelegalsolutions/safelegalsolutions_client/register');
+                return;
+            }
+            
+            // Check if payment already processed
+            if ($student->payment_status === 'paid' && !empty($student->client_id)) {
+                redirect('safelegalsolutions/safelegalsolutions_client/success/' . $student_id);
+                return;
+            }
+            
+            // FREE PACKAGE: Direct success
+            if ($item->total_price <= 0) {
+                $this->_handle_free_package($student_id, $student, $item);
+                return;
+            }
+            
+            // PAID PACKAGE: Create invoice and redirect to Razorpay
+            $this->_process_paid_package($student, $item);
+            
+        } catch (Exception $e) {
+            log_activity($this->log_prefix . ' - Purchase Error: ' . $e->getMessage());
+            set_alert('danger', 'Payment processing failed. Please try again or contact support.');
+            redirect('safelegalsolutions/safelegalsolutions_client/register');
+        }
+    }
+    
+    /**
+     * Handle free package enrollment
+     */
+    private function _handle_free_package($student_id, $student, $item)
+    {
+        try {
+            $this->db->trans_start();
+            
+            $free_payment_id = 'FREE_' . time() . '_' . $student_id;
+            
+            // Update student payment status
+            $this->db->where('id', $student_id);
+            $this->db->update(db_prefix() . 'sls_students', [
+                'payment_status' => 'paid',
+                'payment_percentage' => 100,
+                'amount_paid' => 0.00,
+                'status' => 'draft'
+            ]);
+            
+            // Record free payment transaction
+            $this->db->insert(db_prefix() . 'sls_payments', [
+                'student_id' => $student_id,
+                'payment_id' => $free_payment_id,
+                'payment_method' => 'other',
+                'amount' => 0.00,
+                'payment_date' => date('Y-m-d H:i:s'),
+                'payment_notes' => 'Free package enrollment',
+                'payment_status' => 'completed',
+                'receipt_number' => 'FREE-' . $student_id,
+                'created_by' => $student->created_by,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            // Create REAL client account with credentials
+            $client_result = $this->_create_real_client_account($student_id, $student);
+            
+            if (!$client_result['success']) {
+                throw new Exception('Failed to create client account: ' . $client_result['message']);
+            }
+            
+            // Create package enrollment
+            $enrollment_result = $this->_create_package_enrollment($student_id, $student, $item);
+            
+            if (!$enrollment_result) {
+                throw new Exception('Failed to create package enrollment');
+            }
+            
+            $this->db->trans_complete();
+            
+            if ($this->db->trans_status() === FALSE) {
+                throw new Exception('Transaction failed');
+            }
+            
+            log_activity($this->log_prefix . ' - ✓ Free package enrollment completed [Student ID: ' . $student_id . ', Client ID: ' . $client_result['client_id'] . ']');
+            
+            $this->session->set_flashdata('client_account_created', true);
+            $this->session->set_flashdata('client_id', $client_result['client_id']);
+            $this->session->set_flashdata('email_sent', $client_result['email_sent']);
+            $this->session->set_flashdata('credentials_sent', true);
+            
+            redirect('safelegalsolutions/safelegalsolutions_client/success/' . $student_id);
+            
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            log_activity($this->log_prefix . ' - Free Package Error: ' . $e->getMessage());
+            set_alert('danger', 'Enrollment failed: ' . $e->getMessage());
+            redirect('safelegalsolutions/safelegalsolutions_client/register');
+        }
+    }
+    
+    /**
+     * Process paid package with Razorpay
+     */
+    private function _process_paid_package($student, $item)
+    {
+        try {
+            // Get or create TEMPORARY client for invoice (NOT for portal access)
+            $temp_client_id = $this->_get_or_create_temp_client($student);
+            
+            if (!$temp_client_id) {
+                throw new Exception('Failed to create temporary client for invoice');
+            }
+            
+            // Check for existing unpaid invoice
+            $existing_invoice = $this->db->select('id, status, hash')
+                ->from(db_prefix() . 'invoices')
+                ->where('clientid', $temp_client_id)
+                ->like('adminnote', 'Student ID: ' . $student->id)
+                ->where('status !=', 2) // Not paid
+                ->order_by('id', 'DESC')
+                ->limit(1)
+                ->get()
+                ->row();
+            
+            if ($existing_invoice) {
+                $invoice_id = $existing_invoice->id;
+                $invoice = $this->invoices_model->get($invoice_id);
+                
+                log_activity($this->log_prefix . ' - Reusing existing invoice [Invoice: ' . $invoice_id . ', Student: ' . $student->id . ']');
+            } else {
+                // Create new invoice
+                $invoice_data = [
+                    'clientid'      => $temp_client_id,
+                    'date'          => date('Y-m-d'),
+                    'duedate'       => date('Y-m-d', strtotime('+7 days')),
+                    'currency'      => get_base_currency()->id,
+                    'subtotal'      => $item->base_price,
+                    'total'         => $item->total_price,
+                    'status'        => 1, // unpaid
+                    'allowed_payment_modes' => ['razorpay'],
+                    'clientnote'    => 'Invoice for Package: ' . $item->item_name,
+                    'adminnote'     => 'Student ID: ' . $student->id . ', Package ID: ' . $item->id . ', Email: ' . $student->email,
+                    'newitems'      => [
+                        [
+                            'description' => 'Package Enrollment: ' . $item->item_name,
+                            'long_description' => $item->description ?? 'Package enrollment and access',
+                            'qty'         => 1,
+                            'rate'        => $item->base_price,
+                            'unit'        => '',
+                            'order'       => 1,
+                        ]
+                    ]
+                ];
+                
+                // Add GST as separate line item if applicable
+                if ($item->gst_amount > 0) {
+                    $invoice_data['newitems'][] = [
+                        'description' => 'GST (' . $item->gst_percentage . '%)',
+                        'long_description' => 'Goods and Services Tax',
+                        'qty'         => 1,
+                        'rate'        => $item->gst_amount,
+                        'unit'        => '',
+                        'order'       => 2,
+                    ];
+                }
+                
+                $invoice_id = $this->invoices_model->add($invoice_data);
+                
+                if (!$invoice_id) {
+                    throw new Exception('Failed to create invoice');
+                }
+                
+                $invoice = $this->invoices_model->get($invoice_id);
+                
+                log_activity($this->log_prefix . ' - Invoice created [Invoice: ' . $invoice_id . ', Student: ' . $student->id . ', Amount: ₹' . $item->total_price . ']');
+            }
+            
+            if (!$invoice) {
+                throw new Exception('Invoice not found');
+            }
+            
+            // Load Razorpay gateway and process payment
+            $this->load->library('razor_pay_gateway');
+            
+            $payment_data = [
+                'invoice'   => $invoice,
+                'invoiceid' => $invoice_id,
+                'amount'    => $invoice->total,
+                'hash'      => $invoice->hash,
+            ];
+            
+            log_activity($this->log_prefix . ' - Initiating Razorpay payment [Invoice: ' . $invoice_id . ', Student: ' . $student->id . ', Amount: ₹' . $invoice->total . ']');
+            
+            // This will redirect to Razorpay payment page
+            $this->razor_pay_gateway->process_payment($payment_data);
+            
+        } catch (Exception $e) {
+            log_activity($this->log_prefix . ' - Paid Package Error: ' . $e->getMessage());
+            set_alert('danger', 'Payment processing failed: ' . $e->getMessage());
+            redirect('safelegalsolutions/safelegalsolutions_client/register');
+        }
+    }
+    
+    /**
+     * Get or create TEMPORARY client for invoice ONLY (not for portal access)
+     * This client will remain inactive until payment is successful
+     */
+    private function _get_or_create_temp_client($student)
+    {
+        try {
+            // Check if temporary client already exists
+            if (!empty($student->client_id)) {
+                $existing_client = $this->db->get_where('tblclients', ['userid' => $student->client_id])->row();
+                if ($existing_client) {
+                    return $student->client_id;
+                }
+            }
+            
+            // Create temporary client for invoice ONLY
+            $client_data = [
+                'company'           => $student->student_name . ' (Temporary)',
+                'phonenumber'       => $student->phone,
+                'address'           => $student->address,
+                'datecreated'       => date('Y-m-d H:i:s'),
+                'active'            => 0, // INACTIVE until payment
+                'show_primary_contact' => 1,
+                'registration_confirmed' => 0,
+                'addedfrom'         => $student->created_by ?? 1
+            ];
+            
+            $this->db->insert('tblclients', $client_data);
+            $temp_client_id = $this->db->insert_id();
+            
+            if (!$temp_client_id) {
+                return false;
+            }
+            
+            // Create contact WITHOUT password (will be set after payment)
+            $contact_data = [
+                'userid'            => $temp_client_id,
+                'is_primary'        => 1,
+                'firstname'         => $student->student_name,
+                'lastname'          => '',
+                'email'             => $student->email,
+                'phonenumber'       => $student->phone,
+                'title'             => 'Student',
+                'datecreated'       => date('Y-m-d H:i:s'),
+                'password'          => '', // NO PASSWORD YET
+                'active'            => 0, // INACTIVE
+                'invoice_emails'    => 1,
+                'estimate_emails'   => 0,
+                'credit_note_emails' => 0,
+                'contract_emails'   => 0,
+                'task_emails'       => 0,
+                'project_emails'    => 0,
+                'ticket_emails'     => 0
+            ];
+            
+            $this->db->insert('tblcontacts', $contact_data);
+            
+            // Link temporary client to student
+            $this->db->where('id', $student->id);
+            $this->db->update(db_prefix() . 'sls_students', [
+                'client_id' => $temp_client_id
+            ]);
+            
+            log_activity($this->log_prefix . ' - Temporary client created for invoice [Temp Client ID: ' . $temp_client_id . ', Student ID: ' . $student->id . '] - NO LOGIN ACCESS YET');
+            
+            return $temp_client_id;
+            
+        } catch (Exception $e) {
+            log_activity($this->log_prefix . ' - Create Temp Client Error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * PAYMENT SUCCESS CALLBACK
+     * This is where we create the REAL client account with login credentials
+     */
+    public function payment_success($invoice_id = null)
+    {
+        try {
+            $student_id = $this->session->userdata('temp_student_id');
+            
+            if (!$invoice_id || !is_numeric($invoice_id)) {
+                set_alert('warning', 'Invalid payment reference.');
+                redirect('safelegalsolutions/safelegalsolutions_client/register');
+                return;
+            }
+            
+            $invoice = $this->invoices_model->get($invoice_id);
+            
+            if (!$invoice) {
+                set_alert('warning', 'Invoice not found.');
+                redirect('safelegalsolutions/safelegalsolutions_client/register');
+                return;
+            }
+            
+            // Extract student ID from adminnote
+            if (!$student_id) {
+                $student_id = $this->_extract_student_id_from_admin_note($invoice->adminnote);
+            }
+            
+            if (!$student_id) {
+                set_alert('warning', 'Student information not found.');
+                redirect('safelegalsolutions/safelegalsolutions_client/register');
+                return;
+            }
+            
+            $student = $this->safelegalsolutions_client_model->get_student($student_id);
+            
+            if (!$student) {
+                set_alert('warning', 'Student record not found.');
+                redirect('safelegalsolutions/safelegalsolutions_client/register');
+                return;
+            }
+            
+            // Get item details
+            $item = $this->safelegalsolutions_client_model->get_item($student->item_id);
+            
+            if (!$item) {
+                set_alert('warning', 'Package not found.');
+                redirect('safelegalsolutions/safelegalsolutions_client/register');
+                return;
+            }
+            
+            // Check for payment error
+            if ($this->input->get('payment_error')) {
+                $this->_handle_payment_failure($student_id, $student, 'Payment verification failed');
+                return;
+            }
+            
+            // Get payment transaction ID
+            $payment_id = $this->input->get('razorpay_payment_id');
+            
+            // Verify invoice is paid
+            if ($invoice->status != 2) { // 2 = paid
+                $this->_handle_payment_failure($student_id, $student, 'Payment not completed');
+                return;
+            }
+            
+            // Get payment details from invoice payments
+            if (!$payment_id) {
+                $payments = $this->payments_model->get_invoice_payments($invoice_id);
+                
+                if (empty($payments)) {
+                    $this->_handle_payment_failure($student_id, $student, 'Payment record not found');
+                    return;
+                }
+                
+                $latest_payment = end($payments);
+                $payment_id = $latest_payment['transactionid'];
+            }
+            
+            log_activity($this->log_prefix . ' - Payment verified [Transaction: ' . $payment_id . ', Invoice: ' . $invoice_id . ', Student: ' . $student_id . ']');
+            
+            // START TRANSACTION
+            $this->db->trans_start();
+            
+            // Update student payment status
+            $this->db->where('id', $student_id);
+            $this->db->update(db_prefix() . 'sls_students', [
+                'payment_status' => 'paid',
+                'payment_percentage' => 100,
+                'amount_paid' => $invoice->total,
+                'status' => 'draft'
+            ]);
+            
+            // Record payment in SLS payment table
+            $this->db->insert(db_prefix() . 'sls_payments', [
+                'student_id' => $student_id,
+                'payment_id' => $payment_id,
+                'payment_method' => 'other', // Razorpay
+                'amount' => $invoice->total,
+                'payment_date' => date('Y-m-d H:i:s'),
+                'payment_notes' => 'Razorpay payment successful',
+                'payment_status' => 'completed',
+                'receipt_number' => 'INV-' . $invoice->id, // Invoice number as receipt
+                'created_by' => $student->created_by ?? 1,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            // Create REAL client account with login credentials
+            $client_result = $this->_create_real_client_account($student_id, $student);
+            
+            if (!$client_result['success']) {
+                throw new Exception('Failed to create client account: ' . $client_result['message']);
+            }
+            
+            // Create package enrollment
+            $enrollment_result = $this->_create_package_enrollment($student_id, $student, $item);
+            
+            if (!$enrollment_result) {
+                throw new Exception('Failed to create package enrollment');
+            }
+            
+            $this->db->trans_complete();
+            
+            if ($this->db->trans_status() === FALSE) {
+                throw new Exception('Transaction failed');
+            }
+            
+            log_activity($this->log_prefix . ' - ✓ Payment successful, client account created [Student ID: ' . $student_id . ', Client ID: ' . $client_result['client_id'] . ', Transaction: ' . $payment_id . ']');
+            
+            $this->session->set_flashdata('client_account_created', true);
+            $this->session->set_flashdata('client_id', $client_result['client_id']);
+            $this->session->set_flashdata('email_sent', $client_result['email_sent']);
+            $this->session->set_flashdata('credentials_sent', true);
+            $this->session->set_flashdata('payment_id', $payment_id);
+            
+            // Clear session
+            $this->session->unset_userdata(['temp_student_id', 'registration_data']);
+            
+            redirect('safelegalsolutions/safelegalsolutions_client/success/' . $student_id);
+            
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            log_activity($this->log_prefix . ' - Payment Success Handler Error: ' . $e->getMessage());
+            
+            if (!empty($student_id)) {
+                $this->_handle_payment_failure($student_id, $student ?? null, 'System error: ' . $e->getMessage());
+            } else {
+                set_alert('danger', 'Payment processing error. Please contact support.');
+                redirect('safelegalsolutions/safelegalsolutions_client/register');
+            }
+        }
+    }
+    
+    /**
+     * Create REAL client account with login credentials
+     * Activates the temporary client or creates new one with password
+     */
+    private function _create_real_client_account($student_id, $student)
+    {
+        try {
+            $this->load->helper('string');
+            
+            // Generate random password
+            $password = random_string('alnum', 12);
+            $hashed_password = app_hash_password($password);
+            
+            $real_client_id = null;
+            $is_new_client = false;
+            
+            // Check if temporary client exists
+            if (!empty($student->client_id)) {
+                $temp_client = $this->db->get_where('tblclients', ['userid' => $student->client_id])->row();
+                
+                if ($temp_client) {
+                    // Activate the temporary client
+                    $this->db->where('userid', $student->client_id);
+                    $this->db->update('tblclients', [
+                        'active' => 1,
+                        'company' => $student->student_name, // Remove "(Temporary)"
+                        'registration_confirmed' => 1
+                    ]);
+                    
+                    // Update contact with password and activate
+                    $this->db->where('userid', $student->client_id);
+                    $this->db->where('is_primary', 1);
+                    $this->db->update('tblcontacts', [
+                        'password' => $hashed_password,
+                        'active' => 1,
+                        'email_verified_at' => date('Y-m-d H:i:s'),
+                        'last_password_change' => date('Y-m-d H:i:s')
+                    ]);
+                    
+                    $real_client_id = $student->client_id;
+                    
+                    log_activity($this->log_prefix . ' - Activated temporary client [Client ID: ' . $real_client_id . ', Student ID: ' . $student_id . ']');
+                } else {
+                    // Temporary client doesn't exist, create new
+                    $is_new_client = true;
+                }
+            } else {
+                // No client_id, create new
+                $is_new_client = true;
+            }
+            
+            // Create new client if needed
+            if ($is_new_client) {
+                // Create client
+                $client_data = [
+                    'company'           => $student->student_name,
+                    'phonenumber'       => $student->phone,
+                    'address'           => $student->address,
+                    'datecreated'       => date('Y-m-d H:i:s'),
+                    'active'            => 1, // ACTIVE
+                    'show_primary_contact' => 1,
+                    'registration_confirmed' => 1,
+                    'addedfrom'         => $student->created_by ?? 1
+                ];
+                
+                $this->db->insert('tblclients', $client_data);
+                $real_client_id = $this->db->insert_id();
+                
+                if (!$real_client_id) {
+                    return [
+                        'success' => false,
+                        'message' => 'Failed to create client record'
+                    ];
+                }
+                
+                // Create contact with password
+                $contact_data = [
+                    'userid'            => $real_client_id,
+                    'is_primary'        => 1,
+                    'firstname'         => $student->student_name,
+                    'lastname'          => '',
+                    'email'             => $student->email,
+                    'phonenumber'       => $student->phone,
+                    'title'             => 'Student',
+                    'datecreated'       => date('Y-m-d H:i:s'),
+                    'password'          => $hashed_password,
+                    'active'            => 1, // ACTIVE
+                    'email_verified_at' => date('Y-m-d H:i:s'),
+                    'last_password_change' => date('Y-m-d H:i:s'),
+                    'invoice_emails'    => 1,
+                    'estimate_emails'   => 0,
+                    'credit_note_emails' => 0,
+                    'contract_emails'   => 0,
+                    'task_emails'       => 0,
+                    'project_emails'    => 0,
+                    'ticket_emails'     => 1
+                ];
+                
+                $this->db->insert('tblcontacts', $contact_data);
+                
+                log_activity($this->log_prefix . ' - Created new client account [Client ID: ' . $real_client_id . ', Student ID: ' . $student_id . ']');
+            }
+            
+            // Update student record with client_id
+            $this->db->where('id', $student_id);
+            $this->db->update(db_prefix() . 'sls_students', [
+                'client_id' => $real_client_id,
+                'client_created_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            // Send credentials email
+            $email_sent = $this->_send_credentials_email($student, $password, $real_client_id);
+            
+            return [
+                'success' => true,
+                'client_id' => $real_client_id,
+                'email_sent' => $email_sent,
+                'message' => 'Client account created successfully'
+            ];
+            
+        } catch (Exception $e) {
+            log_activity($this->log_prefix . ' - Create Real Client Error: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Send login credentials email to customer
+     */
+    private function _send_credentials_email($student, $password, $client_id)
+    {
+        try {
+            $this->load->model('emails_model');
+            
+            $login_url = site_url('authentication/login');
+            
+            // Email subject
+            $subject = 'Your Login Credentials - Safe Legal Solutions';
+            
+            // Email body
+            $message = '<p>Dear ' . $student->student_name . ',</p>';
+            $message .= '<p>Thank you for your payment! Your registration is now complete.</p>';
+            $message .= '<p><strong>Your Login Credentials:</strong></p>';
+            $message .= '<ul>';
+            $message .= '<li><strong>Email:</strong> ' . $student->email . '</li>';
+            $message .= '<li><strong>Password:</strong> ' . $password . '</li>';
+            $message .= '</ul>';
+            $message .= '<p><strong>Login URL:</strong> <a href="' . $login_url . '">' . $login_url . '</a></p>';
+            $message .= '<p><strong>Important:</strong> Please change your password after your first login for security.</p>';
+            $message .= '<p>Your Student ID: <strong>' . $student->unique_id . '</strong></p>';
+            $message .= '<p>Your Referral Code: <strong>' . $student->referral_code . '</strong></p>';
+            $message .= '<br>';
+            $message .= '<p>If you have any questions, please contact our support team.</p>';
+            $message .= '<p>Best regards,<br>Safe Legal Solutions Team</p>';
+            
+            // Send email
+            $sent = $this->emails_model->send_simple_email($student->email, $subject, $message);
+            
+            if ($sent) {
+                log_activity($this->log_prefix . ' - ✓ Credentials email sent [Email: ' . $student->email . ', Client ID: ' . $client_id . ']');
+            } else {
+                log_activity($this->log_prefix . ' - ✗ Failed to send credentials email [Email: ' . $student->email . ', Client ID: ' . $client_id . ']');
+            }
+            
+            return $sent;
+            
+        } catch (Exception $e) {
+            log_activity($this->log_prefix . ' - Send Email Error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Create package enrollment record
+     */
+    private function _create_package_enrollment($student_id, $student, $item)
+    {
+        try {
+            // Calculate enrollment dates
+            $enrollment_date = date('Y-m-d');
+            $start_date = date('Y-m-d');
+            
+            // Calculate end date based on package duration
+            $duration_months = $item->duration_months ?? 12;
+            $end_date = date('Y-m-d', strtotime('+' . $duration_months . ' months'));
+            
+            // Check if enrollment already exists
+            $existing = $this->db->get_where(db_prefix() . 'sls_package_enrollments', [
+                'student_id' => $student_id
+            ])->row();
+            
+            if ($existing) {
+                log_activity($this->log_prefix . ' - Package enrollment already exists [Student ID: ' . $student_id . ', Enrollment ID: ' . $existing->id . ']');
+                return $existing->id;
+            }
+            
+            // Create enrollment
+            $enrollment_data = [
+                'student_id' => $student_id,
+                'item_id' => $item->id,
+                'enrollment_date' => $enrollment_date,
+                'start_date' => $start_date,
+                'end_date' => $end_date,
+                'duration_months' => $duration_months,
+                'total_amount' => $item->total_price,
+                'amount_paid' => $student->amount_paid,
+                'payment_status' => 'paid',
+                'enrollment_status' => 'active',
+                'completion_percentage' => 0,
+                'notes' => 'Package enrollment created after successful payment',
+                'created_by' => $student->created_by ?? 1,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            
+            $this->db->insert(db_prefix() . 'sls_package_enrollments', $enrollment_data);
+            $enrollment_id = $this->db->insert_id();
+            
+            if ($enrollment_id) {
+                log_activity($this->log_prefix . ' - ✓ Package enrollment created [Enrollment ID: ' . $enrollment_id . ', Student ID: ' . $student_id . ', Package: ' . $item->item_name . ']');
+            }
+            
+            return $enrollment_id;
+            
+        } catch (Exception $e) {
+            log_activity($this->log_prefix . ' - Create Enrollment Error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * PAYMENT FAILURE CALLBACK
+     * Delete student record and temporary client
+     */
+    public function payment_failure()
+    {
+        try {
+            $student_id = $this->session->userdata('temp_student_id');
+            
+            if (!$student_id) {
+                set_alert('warning', 'Session expired. Please start registration again.');
+                redirect('safelegalsolutions/safelegalsolutions_client/register');
+                return;
+            }
+            
+            $student = $this->safelegalsolutions_client_model->get_student($student_id);
+            
+            if ($student) {
+                $this->_handle_payment_failure($student_id, $student, 'Payment cancelled by user');
+            }
+            
+        } catch (Exception $e) {
+            log_activity($this->log_prefix . ' - Payment Failure Handler Error: ' . $e->getMessage());
+            set_alert('danger', 'An error occurred. Please try again or contact support.');
+            redirect('safelegalsolutions/safelegalsolutions_client/register');
+        }
+    }
+    
+    /**
+     * Handle payment failure - Delete student AND temporary client
+     */
+    private function _handle_payment_failure($student_id, $student, $reason)
+    {
+        try {
+            $this->db->trans_start();
+            
+            log_activity($this->log_prefix . ' - ✗ Payment failed [Student ID: ' . $student_id . ', Reason: ' . $reason . ']');
+            
+            // Delete temporary client if exists
+            if ($student && !empty($student->client_id)) {
+                // Check if this is truly a temporary client (inactive)
+                $client = $this->db->get_where('tblclients', ['userid' => $student->client_id])->row();
+                
+                if ($client && $client->active == 0) {
+                    // Delete contacts
+                    $this->db->delete('tblcontacts', ['userid' => $student->client_id]);
+                    
+                    // Delete client
+                    $this->db->delete('tblclients', ['userid' => $student->client_id]);
+                    
+                    log_activity($this->log_prefix . ' - Deleted temporary client [Client ID: ' . $student->client_id . ']');
+                }
+            }
+            
+            // Delete student record
+            $this->db->delete(db_prefix() . 'sls_students', ['id' => $student_id]);
+            
+            log_activity($this->log_prefix . ' - Deleted student record [Student ID: ' . $student_id . ']');
+            
+            $this->db->trans_complete();
+            
+            // Clear session
+            $this->session->unset_userdata(['temp_student_id', 'registration_data']);
+            
+            set_alert('warning', 'Payment was not successful. Your registration has been cancelled. Please try again.');
+            redirect('safelegalsolutions/safelegalsolutions_client/register');
+            
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            log_activity($this->log_prefix . ' - Handle Payment Failure Error: ' . $e->getMessage());
+            set_alert('danger', 'An error occurred. Please contact support with Student ID: ' . $student_id);
+            redirect('safelegalsolutions/safelegalsolutions_client/register');
+        }
+    }
+    
+    /**
+     * Extract student ID from invoice admin note
+     */
+    private function _extract_student_id_from_admin_note($note)
+    {
+        if (preg_match('/Student ID: (\d+)/', $note, $matches)) {
+            return (int)$matches[1];
+        }
+        return null;
+    }
+    
+    // ================================================================
+    // STEP 3: SUCCESS PAGE
+    // ================================================================
+    
     public function success($student_id = 0)
     {
         try {
-            // Validate student ID
             if (empty($student_id)) {
                 redirect('safelegalsolutions/safelegalsolutions_client/register');
                 return;
             }
             
-            // Get student record
             $student = $this->_get_student_or_redirect($student_id);
             
             if (!$student) {
-                return; // Already redirected
+                return;
             }
             
-            // Load related data
             $branch = $this->_get_branch_safe($student->branch_id);
             $item = $this->_get_item_safe($student->item_id);
             
-            // Display success page
             $this->_display_success_page($student, $branch, $item);
             
         } catch (Exception $e) {
@@ -281,30 +1042,18 @@ class Safelegalsolutions_client extends ClientsController
     // REGISTRATION STEP 1: FORM PROCESSING
     // ================================================================
     
-    /**
-     * Process registration form submission
-     * 
-     * @param object $branch Branch object
-     * @param string $token Branch token
-     * @param array $items Available packages
-     * @return void
-     */
     private function _process_registration_step1($branch, $token, $items)
     {
         try {
             $post_data = $this->input->post();
             
-            // Set validation rules
             $this->_set_registration_validation_rules();
             
-            // Run validation
             if ($this->form_validation->run() === FALSE) {
-                // Validation failed - redisplay form
                 $this->_display_registration_form($branch, $token, $items, $post_data);
                 return;
             }
             
-            // Store in session and redirect to review
             $this->_store_registration_data($post_data, $branch->id, $token);
             redirect('safelegalsolutions/safelegalsolutions_client/review');
             
@@ -315,14 +1064,8 @@ class Safelegalsolutions_client extends ClientsController
         }
     }
     
-    /**
-     * Set form validation rules for registration
-     * 
-     * @return void
-     */
     private function _set_registration_validation_rules()
     {
-        // Student Name
         $this->form_validation->set_rules('student_name', 'Full Name', [
             'required',
             'trim',
@@ -332,7 +1075,6 @@ class Safelegalsolutions_client extends ClientsController
             'regex_match' => 'The {field} must contain only letters and spaces.'
         ]);
         
-        // Email
         $this->form_validation->set_rules('email', 'Email Address', [
             'required',
             'trim',
@@ -341,7 +1083,6 @@ class Safelegalsolutions_client extends ClientsController
             'callback_check_duplicate_email'
         ]);
         
-        // Phone
         $this->form_validation->set_rules('phone', 'Phone Number', [
             'required',
             'trim',
@@ -351,20 +1092,17 @@ class Safelegalsolutions_client extends ClientsController
             'regex_match' => 'The {field} must contain only numbers and valid phone characters.'
         ]);
         
-        // Address
         $this->form_validation->set_rules('address', 'Address', [
             'required',
             'trim',
             'min_length[10]'
         ]);
         
-        // Date of Birth
         $this->form_validation->set_rules('date_of_birth', 'Date of Birth', [
             'required',
             'callback_validate_age'
         ]);
         
-        // Passport Number
         $this->form_validation->set_rules('passport_number', 'Passport Number', [
             'required',
             'trim',
@@ -375,7 +1113,6 @@ class Safelegalsolutions_client extends ClientsController
             'regex_match' => 'The {field} must contain only uppercase letters and numbers.'
         ]);
         
-        // Package Selection
         $this->form_validation->set_rules('item_id', 'Package Selection', [
             'required',
             'numeric',
@@ -383,14 +1120,6 @@ class Safelegalsolutions_client extends ClientsController
         ]);
     }
     
-    /**
-     * Store validated registration data in session
-     * 
-     * @param array $post_data Form POST data
-     * @param int $branch_id Branch ID
-     * @param string $token Branch token
-     * @return void
-     */
     private function _store_registration_data($post_data, $branch_id, $token)
     {
         $session_data = [
@@ -402,7 +1131,8 @@ class Safelegalsolutions_client extends ClientsController
             'address'         => trim($post_data['address']),
             'date_of_birth'   => $post_data['date_of_birth'],
             'passport_number' => strtoupper(trim($post_data['passport_number'])),
-            'item_id'         => $post_data['item_id']
+            'item_id'         => $post_data['item_id'],
+            'status'          => 'draft'
         ];
         
         $this->session->set_userdata('registration_data', $session_data);
@@ -411,393 +1141,9 @@ class Safelegalsolutions_client extends ClientsController
     }
 
     // ================================================================
-    // REGISTRATION STEP 2: PAYMENT & COMPLETION
-    // ================================================================
-    
-    /**
-     * Complete registration with payment processing
-     * 
-     * WORKFLOW:
-     * 1. Extract and validate payment information
-     * 2. Generate unique ID and calculate profile completion
-     * 3. Insert student record
-     * 4. Record payment transaction (if applicable)
-     * 5. Check if payment complete → create client account
-     * 6. Redirect to success page
-     * 
-     * @param array $registration_data Registration form data
-     * @param object $branch Branch object
-     * @param object $item Package object
-     * @return void
-     */
-    private function _complete_registration($registration_data, $branch, $item)
-    {
-        try {
-            // Get payment information
-            $payment_info = $this->_extract_payment_info($item);
-            
-            // Generate unique ID
-            $unique_id = $this->_generate_unique_id($registration_data['passport_number']);
-            
-            // Calculate profile completion
-            $profile_completion = $this->_calculate_profile_completion($registration_data);
-            
-            // Generate referral code
-            $referral_code = $this->_generate_referral_code();
-            
-            // Prepare student data
-            $insert_data = $this->_prepare_student_data(
-                $registration_data,
-                $branch,
-                $item,
-                $payment_info,
-                $unique_id,
-                $profile_completion,
-                $referral_code
-            );
-            
-            // Insert student record
-            $student_id = $this->_insert_student_record($insert_data);
-            
-            if (!$student_id) {
-                throw new Exception('Failed to create student record');
-            }
-            
-            // Record payment transaction if amount > 0
-            if ($payment_info['amount_paid'] > 0) {
-                $this->_record_payment_transaction($student_id, $payment_info, $branch);
-            }
-            
-            // Check if payment is complete → create client account
-            $this->_handle_client_account_creation($student_id, $branch, $payment_info['payment_percentage']);
-            
-            // Clear session and redirect to success
-            $this->session->unset_userdata('registration_data');
-            redirect('safelegalsolutions/safelegalsolutions_client/success/' . $student_id);
-            
-        } catch (Exception $e) {
-            log_activity($this->log_prefix . ' - Registration Completion Error: ' . $e->getMessage());
-            
-            $data = [
-                'title'             => 'Review & Payment',
-                'registration_data' => $registration_data,
-                'branch'            => $branch,
-                'item'              => $item,
-                'error'             => 'Registration failed. Please try again or contact support.',
-                'token'             => $registration_data['token']
-            ];
-            
-            $this->load->view('safelegalsolutions/public_review', $data);
-        }
-    }
-    
-    /**
-     * Extract payment information from POST data
-     * 
-     * @param object $item Package object
-     * @return array Payment information
-     */
-    private function _extract_payment_info($item)
-    {
-        try {
-            $payment_status = $this->input->post('payment_status'); // 'paid', 'partial', 'unpaid'
-            $amount_paid = 0.00;
-            
-            // Determine amount based on payment status
-            if ($payment_status === 'paid') {
-                $amount_paid = $this->input->post('amount_paid');
-                if (empty($amount_paid)) {
-                    $amount_paid = $item->total_price;
-                }
-            } elseif ($payment_status === 'partial') {
-                $amount_paid = $this->input->post('amount_partial');
-                if (empty($amount_paid)) {
-                    $amount_paid = 0.00;
-                }
-            } else {
-                $payment_status = 'unpaid';
-                $amount_paid = 0.00;
-            }
-            
-            // Ensure numeric
-            $amount_paid = (float)$amount_paid;
-            
-            // Calculate percentage
-            $payment_percentage = 0;
-            if ($item->total_price > 0) {
-                $payment_percentage = ($amount_paid / $item->total_price) * 100;
-            }
-            
-            log_activity($this->log_prefix . ' - Payment Info: Status=' . $payment_status . 
-                        ', Amount=' . $amount_paid . ', Percentage=' . $payment_percentage . '%');
-            
-            return [
-                'payment_status'     => $payment_status,
-                'amount_paid'        => $amount_paid,
-                'payment_percentage' => $payment_percentage
-            ];
-            
-        } catch (Exception $e) {
-            log_activity($this->log_prefix . ' - Payment Extraction Error: ' . $e->getMessage());
-            
-            return [
-                'payment_status'     => 'unpaid',
-                'amount_paid'        => 0.00,
-                'payment_percentage' => 0
-            ];
-        }
-    }
-    
-    /**
-     * Generate unique ID from passport number
-     * 
-     * @param string $passport Passport number
-     * @return string Unique ID
-     */
-    private function _generate_unique_id($passport)
-    {
-        try {
-            $passport = strtoupper(trim($passport));
-            
-            if (empty($passport)) {
-                log_activity($this->log_prefix . ' - WARNING: Empty passport for unique ID generation');
-                return 'saflg-' . time();
-            }
-            
-            log_activity($this->log_prefix . ' - Generating unique ID from passport: ' . $passport);
-            
-            $unique_id = $this->safelegalsolutions_client_model->generate_unique_id($passport);
-            
-            if (empty($unique_id)) {
-                $unique_id = 'saflg-' . str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT);
-                log_activity($this->log_prefix . ' - Fallback unique ID generated: ' . $unique_id);
-            } else {
-                log_activity($this->log_prefix . ' - Unique ID generated: ' . $unique_id);
-            }
-            
-            return $unique_id;
-            
-        } catch (Exception $e) {
-            log_activity($this->log_prefix . ' - Unique ID Generation Error: ' . $e->getMessage());
-            return 'saflg-' . time();
-        }
-    }
-    
-    /**
-     * Calculate profile completion percentage
-     * 
-     * @param array $registration_data Registration data
-     * @return int Profile completion percentage
-     */
-    private function _calculate_profile_completion($registration_data)
-    {
-        try {
-            return $this->safelegalsolutions_client_model->calculate_profile_completion($registration_data);
-        } catch (Exception $e) {
-            log_activity($this->log_prefix . ' - Profile Completion Calculation Error: ' . $e->getMessage());
-            return 0;
-        }
-    }
-    
-    /**
-     * Generate unique referral code
-     * 
-     * @return string Referral code
-     */
-    private function _generate_referral_code()
-    {
-        try {
-            return $this->safelegalsolutions_client_model->generate_referral_code();
-        } catch (Exception $e) {
-            log_activity($this->log_prefix . ' - Referral Code Generation Error: ' . $e->getMessage());
-            return 'REF-' . time();
-        }
-    }
-    
-    /**
-     * Prepare student data for insertion
-     * 
-     * @param array $registration_data Registration form data
-     * @param object $branch Branch object
-     * @param object $item Package object
-     * @param array $payment_info Payment information
-     * @param string $unique_id Unique student ID
-     * @param int $profile_completion Profile completion percentage
-     * @param string $referral_code Referral code
-     * @return array Insert data
-     */
-    private function _prepare_student_data($registration_data, $branch, $item, $payment_info, 
-                                           $unique_id, $profile_completion, $referral_code)
-    {
-        $notes = sprintf(
-            'Package: %s | Price: ₹%s | Payment: %s (%.2f%%)',
-            $item->item_name,
-            number_format($item->total_price, 2),
-            ucfirst($payment_info['payment_status']),
-            $payment_info['payment_percentage']
-        );
-        
-        return [
-            'branch_id'                  => $branch->id,
-            'nodal_partner_manager_id'   => $branch->nodal_partner_manager_id,
-            'created_by'                 => $branch->nodal_partner_manager_id,
-            'student_name'               => $registration_data['student_name'],
-            'email'                      => $registration_data['email'],
-            'phone'                      => $registration_data['phone'],
-            'address'                    => $registration_data['address'],
-            'date_of_birth'              => $registration_data['date_of_birth'],
-            'passport_number'            => isset($registration_data['passport_number']) ? 
-                                           strtoupper($registration_data['passport_number']) : '',
-            'unique_id'                  => $unique_id,
-            'item_id'                    => $registration_data['item_id'],
-            'payment_status'             => $payment_info['payment_status'],
-            'payment_percentage'         => $payment_info['payment_percentage'],
-            'amount_paid'                => $payment_info['amount_paid'],
-            'total_amount'               => $item->total_price,
-            'referral_code'              => $referral_code,
-            'status'                     => 'draft',
-            'profile_completion'         => $profile_completion,
-            'earnings'                   => '0.00',
-            'notes'                      => $notes,
-            'is_locked'                  => 0
-        ];
-    }
-    
-    /**
-     * Insert student record into database
-     * 
-     * @param array $insert_data Student data
-     * @return int|false Student ID or false on failure
-     */
-    private function _insert_student_record($insert_data)
-    {
-        try {
-            $student_id = $this->safelegalsolutions_client_model->add_student($insert_data);
-            
-            if ($student_id) {
-                log_activity($this->log_prefix . ' - Student created [ID: ' . $student_id . 
-                           ', Email: ' . $insert_data['email'] . ']');
-            } else {
-                log_activity($this->log_prefix . ' - Failed to insert student record');
-            }
-            
-            return $student_id;
-            
-        } catch (Exception $e) {
-            log_activity($this->log_prefix . ' - Student Insertion Error: ' . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Record payment transaction
-     * 
-     * @param int $student_id Student ID
-     * @param array $payment_info Payment information
-     * @param object $branch Branch object
-     * @return void
-     */
-    private function _record_payment_transaction($student_id, $payment_info, $branch)
-    {
-        try {
-            $payment_method = $this->input->post('payment_method');
-            if (empty($payment_method)) {
-                $payment_method = 'cash';
-            }
-            
-            $payment_data = [
-                'student_id'             => $student_id,
-                'payment_method'         => $payment_method,
-                'amount'                 => $payment_info['amount_paid'],
-                'payment_date'           => date('Y-m-d H:i:s'),
-                'transaction_reference'  => $this->input->post('transaction_reference'),
-                'payment_notes'          => $this->input->post('payment_notes'),
-                'payment_status'         => 'completed',
-                'created_by'             => $branch->nodal_partner_manager_id
-            ];
-            
-            $payment_id = $this->safelegalsolutions_client_model->add_payment($payment_data);
-            
-            if ($payment_id) {
-                log_activity($this->log_prefix . ' - Payment recorded [Payment ID: ' . $payment_id . 
-                           ', Student ID: ' . $student_id . ', Amount: ' . $payment_info['amount_paid'] . ']');
-            }
-            
-        } catch (Exception $e) {
-            log_activity($this->log_prefix . ' - Payment Recording Error: ' . $e->getMessage());
-        }
-    }
-    
-    /**
-     * Handle client account creation if payment is complete
-     * 
-     * @param int $student_id Student ID
-     * @param object $branch Branch object
-     * @param float $payment_percentage Payment percentage
-     * @return void
-     */
-    private function _handle_client_account_creation($student_id, $branch, $payment_percentage)
-    {
-        try {
-            $payment_complete = $this->safelegalsolutions_client_model->is_payment_complete($student_id);
-            
-            log_activity($this->log_prefix . ' - Payment check for Student ID ' . $student_id . 
-                        ' = ' . ($payment_complete ? 'COMPLETE' : 'INCOMPLETE'));
-            
-            if ($payment_complete) {
-                // Create package enrollment
-                $enrollment_id = $this->safelegalsolutions_client_model->create_package_enrollment(
-                    $student_id, 
-                    ['created_by' => $branch->nodal_partner_manager_id]
-                );
-                
-                if ($enrollment_id) {
-                    log_activity($this->log_prefix . ' - Package enrollment created [Enrollment ID: ' . 
-                               $enrollment_id . ', Student ID: ' . $student_id . ']');
-                }
-                
-                // Create client account
-                $client_result = $this->safelegalsolutions_client_model->create_client_account_for_student($student_id);
-                
-                if ($client_result['success']) {
-                    log_activity($this->log_prefix . ' - ✓ Client account created [Student ID: ' . 
-                               $student_id . ', Client ID: ' . $client_result['client_id'] . ']');
-                    
-                    $this->session->set_flashdata('client_account_created', true);
-                    $this->session->set_flashdata('client_id', $client_result['client_id']);
-                    $this->session->set_flashdata('email_sent', $client_result['email_sent']);
-                } else {
-                    log_activity($this->log_prefix . ' - ✗ Client creation failed [Student ID: ' . 
-                               $student_id . ', Error: ' . $client_result['message'] . ']');
-                    
-                    $this->session->set_flashdata('client_account_created', false);
-                    $this->session->set_flashdata('client_error', $client_result['message']);
-                }
-            } else {
-                log_activity($this->log_prefix . ' - Payment incomplete (' . $payment_percentage . 
-                           '%), client account NOT created [Student ID: ' . $student_id . ']');
-                
-                $this->session->set_flashdata('payment_incomplete', true);
-                $this->session->set_flashdata('payment_percentage', $payment_percentage);
-            }
-            
-        } catch (Exception $e) {
-            log_activity($this->log_prefix . ' - Client Account Creation Error: ' . $e->getMessage());
-            $this->session->set_flashdata('client_account_created', false);
-            $this->session->set_flashdata('client_error', 'Failed to create account: ' . $e->getMessage());
-        }
-    }
-
-    // ================================================================
     // VALIDATION CALLBACKS
     // ================================================================
     
-    /**
-     * Validation callback: Check for duplicate email
-     * 
-     * @param string $email Email address
-     * @return bool True if unique, false if duplicate
-     */
     public function check_duplicate_email($email)
     {
         try {
@@ -819,12 +1165,6 @@ class Safelegalsolutions_client extends ClientsController
         }
     }
     
-    /**
-     * Validation callback: Validate age (must be 18+)
-     * 
-     * @param string $date_of_birth Date of birth (YYYY-MM-DD)
-     * @return bool True if valid age, false otherwise
-     */
     public function validate_age($date_of_birth)
     {
         if (empty($date_of_birth)) {
@@ -836,23 +1176,19 @@ class Safelegalsolutions_client extends ClientsController
             $dob = new DateTime($date_of_birth);
             $today = new DateTime();
             
-            // Check if date is in the future
             if ($dob > $today) {
                 $this->form_validation->set_message('validate_age', 'Date of birth cannot be in the future.');
                 return false;
             }
             
-            // Calculate age
             $age = $today->diff($dob)->y;
             
-            // Must be at least 18 years old
             if ($age < 18) {
                 $this->form_validation->set_message('validate_age', 
                     'You must be at least 18 years old to register. Current age: ' . $age . ' years.');
                 return false;
             }
             
-            // Sanity check: not over 100 years old
             if ($age > 100) {
                 $this->form_validation->set_message('validate_age', 'Please enter a valid date of birth.');
                 return false;
@@ -867,12 +1203,6 @@ class Safelegalsolutions_client extends ClientsController
         }
     }
     
-    /**
-     * Validation callback: Validate item exists and is active
-     * 
-     * @param int $item_id Package ID
-     * @return bool True if valid, false otherwise
-     */
     public function validate_item($item_id)
     {
         if (empty($item_id)) {
@@ -903,28 +1233,17 @@ class Safelegalsolutions_client extends ClientsController
     }
 
     // ================================================================
-    // CLIENT PORTAL METHODS (REQUIRE AUTHENTICATION)
+    // CLIENT PORTAL METHODS
     // ================================================================
     
-    /**
-     * Client Dashboard
-     * 
-     * Shows student registration overview with enrollment details
-     * 
-     * URL: /clients/safelegalsolutions_client/my_dashboard
-     * 
-     * @return void
-     */
     public function my_dashboard()
     {
         try {
-            // Verify authentication
             if (!is_client_logged_in()) {
                 redirect(site_url('authentication/login'));
                 return;
             }
             
-            // Get logged-in contact
             $contact = $this->clients_model->get_contact(get_contact_user_id());
             
             if (!$contact) {
@@ -932,7 +1251,6 @@ class Safelegalsolutions_client extends ClientsController
                 return;
             }
             
-            // Get student record
             $student = $this->safelegalsolutions_client_model->get_student_by_client_id($contact->userid);
             
             if (!$student) {
@@ -940,16 +1258,13 @@ class Safelegalsolutions_client extends ClientsController
                 return;
             }
             
-            // Load related data
             $branch = $this->_get_branch_safe($student->branch_id);
             $item = $this->_get_item_safe($student->item_id);
             $enrollment = $this->_get_enrollment_safe($student->id);
             
-            // Calculate statistics
             $days_since_registration = $this->_calculate_days_since($student->created_at);
             $days_until_end = $this->_calculate_days_until_end($enrollment);
             
-            // Prepare dashboard data
             $data = [
                 'title'                   => 'My Dashboard',
                 'student'                 => $student,
@@ -971,25 +1286,14 @@ class Safelegalsolutions_client extends ClientsController
         }
     }
     
-    /**
-     * Client Profile View
-     * 
-     * Shows complete student details
-     * 
-     * URL: /clients/safelegalsolutions_client/my_profile
-     * 
-     * @return void
-     */
     public function my_profile()
     {
         try {
-            // Verify authentication
             if (!is_client_logged_in()) {
                 redirect(site_url('authentication/login'));
                 return;
             }
             
-            // Get logged-in contact
             $contact = $this->clients_model->get_contact(get_contact_user_id());
             
             if (!$contact) {
@@ -997,7 +1301,6 @@ class Safelegalsolutions_client extends ClientsController
                 return;
             }
             
-            // Get student record
             $student = $this->safelegalsolutions_client_model->get_student_by_client_id($contact->userid);
             
             if (!$student) {
@@ -1005,11 +1308,9 @@ class Safelegalsolutions_client extends ClientsController
                 return;
             }
             
-            // Load related data
             $branch = $this->_get_branch_safe($student->branch_id);
             $item = $this->_get_item_safe($student->item_id);
             
-            // Prepare profile data
             $data = [
                 'title'   => 'My Profile',
                 'student' => $student,
@@ -1028,25 +1329,14 @@ class Safelegalsolutions_client extends ClientsController
         }
     }
     
-    /**
-     * Referral Card View
-     * 
-     * Shows downloadable referral card with QR code
-     * 
-     * URL: /clients/safelegalsolutions_client/referral_card
-     * 
-     * @return void
-     */
     public function referral_card()
     {
         try {
-            // Verify authentication
             if (!is_client_logged_in()) {
                 redirect(site_url('authentication/login'));
                 return;
             }
             
-            // Get logged-in contact
             $contact = $this->clients_model->get_contact(get_contact_user_id());
             
             if (!$contact) {
@@ -1054,7 +1344,6 @@ class Safelegalsolutions_client extends ClientsController
                 return;
             }
             
-            // Get student record
             $student = $this->safelegalsolutions_client_model->get_student_by_client_id($contact->userid);
             
             if (!$student) {
@@ -1062,10 +1351,8 @@ class Safelegalsolutions_client extends ClientsController
                 return;
             }
             
-            // Load branch data
             $branch = $this->_get_branch_safe($student->branch_id);
             
-            // Prepare referral card data
             $data = [
                 'title'         => 'My Referral Card',
                 'student'       => $student,
@@ -1085,20 +1372,13 @@ class Safelegalsolutions_client extends ClientsController
     }
 
     // ================================================================
-    // HELPER METHODS - BRANCH & ITEM OPERATIONS
+    // HELPER METHODS
     // ================================================================
     
-    /**
-     * Get and validate branch by token or default
-     * 
-     * @param string $token Branch token
-     * @return object|false Branch object or false
-     */
     private function _get_and_validate_branch($token)
     {
         try {
             if (empty($token)) {
-                // Get default branch
                 $branch = $this->safelegalsolutions_client_model->get_default_branch();
                 
                 if (!$branch) {
@@ -1109,7 +1389,6 @@ class Safelegalsolutions_client extends ClientsController
                     return false;
                 }
             } else {
-                // Get branch by token
                 $branch = $this->safelegalsolutions_client_model->get_branch_by_token($token);
                 
                 if (!$branch) {
@@ -1138,11 +1417,6 @@ class Safelegalsolutions_client extends ClientsController
         }
     }
     
-    /**
-     * Get active items/packages
-     * 
-     * @return array|false Array of items or false
-     */
     private function _get_active_items()
     {
         try {
@@ -1153,12 +1427,6 @@ class Safelegalsolutions_client extends ClientsController
         }
     }
     
-    /**
-     * Get branch safely with error handling
-     * 
-     * @param int $branch_id Branch ID
-     * @return object|null Branch object or null
-     */
     private function _get_branch_safe($branch_id)
     {
         try {
@@ -1169,12 +1437,6 @@ class Safelegalsolutions_client extends ClientsController
         }
     }
     
-    /**
-     * Get item safely with error handling
-     * 
-     * @param int $item_id Item ID
-     * @return object|null Item object or null
-     */
     private function _get_item_safe($item_id)
     {
         try {
@@ -1188,31 +1450,25 @@ class Safelegalsolutions_client extends ClientsController
         }
     }
     
-    /**
-     * Get enrollment safely with error handling
-     * 
-     * @param int $student_id Student ID
-     * @return object|null Enrollment object or null
-     */
     private function _get_enrollment_safe($student_id)
     {
         try {
             if (empty($student_id)) {
                 return null;
             }
-            return $this->safelegalsolutions_client_model->get_enrollment_by_student($student_id);
+            
+            $enrollment = $this->db->get_where(db_prefix() . 'sls_package_enrollments', [
+                'student_id' => $student_id
+            ])->row();
+            
+            return $enrollment;
+            
         } catch (Exception $e) {
             log_activity($this->log_prefix . ' - Get Enrollment Error: ' . $e->getMessage());
             return null;
         }
     }
     
-    /**
-     * Validate branch for review page
-     * 
-     * @param array $registration_data Registration data
-     * @return object|false Branch object or false
-     */
     private function _validate_review_branch($registration_data)
     {
         try {
@@ -1234,12 +1490,6 @@ class Safelegalsolutions_client extends ClientsController
         }
     }
     
-    /**
-     * Validate item for review page
-     * 
-     * @param array $registration_data Registration data
-     * @return object|false Item object or false
-     */
     private function _validate_review_item($registration_data)
     {
         try {
@@ -1262,12 +1512,6 @@ class Safelegalsolutions_client extends ClientsController
         }
     }
     
-    /**
-     * Get student or redirect on failure
-     * 
-     * @param int $student_id Student ID
-     * @return object|false Student object or false
-     */
     private function _get_student_or_redirect($student_id)
     {
         try {
@@ -1286,17 +1530,7 @@ class Safelegalsolutions_client extends ClientsController
             return false;
         }
     }
-
-    // ================================================================
-    // HELPER METHODS - DATE CALCULATIONS
-    // ================================================================
     
-    /**
-     * Calculate days since a given date
-     * 
-     * @param string $date Date string
-     * @return int Number of days
-     */
     private function _calculate_days_since($date)
     {
         try {
@@ -1309,12 +1543,6 @@ class Safelegalsolutions_client extends ClientsController
         }
     }
     
-    /**
-     * Calculate days until enrollment end date
-     * 
-     * @param object|null $enrollment Enrollment object
-     * @return int|null Days until end (negative if expired)
-     */
     private function _calculate_days_until_end($enrollment)
     {
         try {
@@ -1326,7 +1554,6 @@ class Safelegalsolutions_client extends ClientsController
             $today = new DateTime();
             $days_until_end = $today->diff($end_date)->days;
             
-            // Negative if expired
             if ($today > $end_date) {
                 $days_until_end = -$days_until_end;
             }
@@ -1338,21 +1565,55 @@ class Safelegalsolutions_client extends ClientsController
             return null;
         }
     }
+    
+    private function _generate_unique_id($passport_number)
+    {
+        try {
+            $passport = strtoupper(trim($passport_number));
+            
+            if (empty($passport)) {
+                log_activity($this->log_prefix . ' - WARNING: Empty passport for unique ID generation');
+                return 'saflg-' . time();
+            }
+            
+            $unique_id = $this->safelegalsolutions_client_model->generate_unique_id($passport);
+            
+            if (empty($unique_id)) {
+                $unique_id = 'saflg-' . str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT);
+            }
+            
+            return $unique_id;
+            
+        } catch (Exception $e) {
+            log_activity($this->log_prefix . ' - Unique ID Generation Error: ' . $e->getMessage());
+            return 'saflg-' . time();
+        }
+    }
+    
+    private function _calculate_profile_completion($registration_data)
+    {
+        try {
+            return $this->safelegalsolutions_client_model->calculate_profile_completion($registration_data);
+        } catch (Exception $e) {
+            log_activity($this->log_prefix . ' - Profile Completion Calculation Error: ' . $e->getMessage());
+            return 0;
+        }
+    }
+    
+    private function _generate_referral_code()
+    {
+        try {
+            return $this->safelegalsolutions_client_model->generate_referral_code();
+        } catch (Exception $e) {
+            log_activity($this->log_prefix . ' - Referral Code Generation Error: ' . $e->getMessage());
+            return 'REF-' . time();
+        }
+    }
 
     // ================================================================
     // VIEW RENDERING METHODS
     // ================================================================
     
-    /**
-     * Display registration form
-     * 
-     * @param object $branch Branch object
-     * @param string $token Branch token
-     * @param array $items Available packages
-     * @param array $form_data Form data (for repopulation)
-     * @param string $error Optional error message
-     * @return void
-     */
     private function _display_registration_form($branch, $token, $items, $form_data = [], $error = '')
     {
         $data = [
@@ -1367,35 +1628,20 @@ class Safelegalsolutions_client extends ClientsController
         $this->load->view('safelegalsolutions/public_register', $data);
     }
     
-    /**
-     * Display review page
-     * 
-     * @param array $registration_data Registration data
-     * @param object $branch Branch object
-     * @param object $item Package object
-     * @return void
-     */
-    private function _display_review_page($registration_data, $branch, $item)
+    private function _display_review_page($registration_data, $branch, $item, $student_id)
     {
         $data = [
             'title'             => 'Review & Payment',
             'registration_data' => $registration_data,
             'branch'            => $branch,
             'item'              => $item,
+            'student_id'        => $student_id,
             'token'             => $registration_data['token']
         ];
         
         $this->load->view('safelegalsolutions/public_review', $data);
     }
     
-    /**
-     * Display success page
-     * 
-     * @param object $student Student object
-     * @param object $branch Branch object
-     * @param object $item Package object
-     * @return void
-     */
     private function _display_success_page($student, $branch, $item)
     {
         $data = [
@@ -1407,25 +1653,19 @@ class Safelegalsolutions_client extends ClientsController
             'branch'                  => $branch,
             'item'                    => $item,
             'payment_status'          => $student->payment_status,
-            'payment_percentage'      => isset($student->payment_percentage) ? $student->payment_percentage : 0,
+            'payment_percentage'      => $student->payment_percentage ?? 0,
             'client_account_created'  => $this->session->flashdata('client_account_created'),
             'client_id'               => $this->session->flashdata('client_id'),
             'email_sent'              => $this->session->flashdata('email_sent'),
+            'credentials_sent'        => $this->session->flashdata('credentials_sent'),
             'client_error'            => $this->session->flashdata('client_error'),
-            'payment_incomplete'      => $this->session->flashdata('payment_incomplete'),
+            'payment_id'              => $this->session->flashdata('payment_id'),
             'has_client_account'      => !empty($student->client_id)
         ];
         
         $this->load->view('safelegalsolutions/public_success', $data);
     }
     
-    /**
-     * Display error page (public)
-     * 
-     * @param string $title Error title
-     * @param string $message Error message
-     * @return void
-     */
     private function _show_error($title, $message)
     {
         $data = [
@@ -1436,12 +1676,6 @@ class Safelegalsolutions_client extends ClientsController
         $this->load->view('safelegalsolutions/public_error', $data);
     }
     
-    /**
-     * Display "no record" page for client portal
-     * 
-     * @param string $title Page title
-     * @return void
-     */
     private function _show_client_no_record($title)
     {
         $data = [
@@ -1454,13 +1688,6 @@ class Safelegalsolutions_client extends ClientsController
         $this->layout();
     }
     
-    /**
-     * Display error page for client portal
-     * 
-     * @param string $title Error title
-     * @param string $message Error message
-     * @return void
-     */
     private function _show_client_error($title, $message)
     {
         $data = [
@@ -1473,4 +1700,3 @@ class Safelegalsolutions_client extends ClientsController
         $this->layout();
     }
 }
-

@@ -136,28 +136,48 @@ class Safelegalsolutions_client_model extends App_Model
         return $this->db->get($this->table_students)->row();
     }
 
-    /**
-     * Add new student
-     * 
-     * @param array $data Student data
-     * @return int|bool Inserted ID on success, false on failure
-     */
-    public function add_student($data)
-    {
-        // Add timestamps
-        $data['created_at'] = date('Y-m-d H:i:s');
-        $data['updated_at'] = date('Y-m-d H:i:s');
-        
-        // Insert into database
-        $this->db->insert($this->table_students, $data);
-        
-        if ($this->db->affected_rows() > 0) {
-            return $this->db->insert_id();
-        }
-        
-        return false;
+ /**
+ * Add new student
+ * 
+ * @param array $data Student data
+ * @return int|bool Inserted ID on success, false on failure
+ */
+public function add_student($data)
+{
+    // ============================================================
+    // SET DEFAULT VALUES - CRITICAL FIX FOR NULL STATUS
+    // ============================================================
+    if (!isset($data['status']) || empty($data['status'])) {
+        $data['status'] = 'draft';
     }
-
+    
+    if (!isset($data['is_locked']) || $data['is_locked'] === '') {
+        $data['is_locked'] = 0;
+    }
+    
+    if (!isset($data['profile_completion']) || $data['profile_completion'] === '') {
+        $data['profile_completion'] = 0;
+    }
+    
+    // Add timestamps
+    $data['created_at'] = date('Y-m-d H:i:s');
+    $data['updated_at'] = date('Y-m-d H:i:s');
+    
+    // Log for debugging
+    log_activity('SafeLegal Client Model - Creating student [Name: ' . $data['student_name'] . ', Email: ' . $data['email'] . ', Status: ' . $data['status'] . ', Locked: ' . $data['is_locked'] . ', Completion: ' . $data['profile_completion'] . ']');
+    
+    // Insert into database
+    $this->db->insert($this->table_students, $data);
+    
+    if ($this->db->affected_rows() > 0) {
+        $insert_id = $this->db->insert_id();
+        log_activity('SafeLegal Client Model - âœ" Student created successfully [ID: ' . $insert_id . ', Status: ' . $data['status'] . ']');
+        return $insert_id;
+    }
+    
+    log_activity('SafeLegal Client Model - âœ— Failed to create student');
+    return false;
+}
     /**
      * Generate unique referral code
      * Format: SLS-XXXXXX (6 random alphanumeric characters)

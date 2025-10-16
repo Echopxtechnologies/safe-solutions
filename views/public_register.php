@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($title) ? $title : 'Candidate Registration'; ?> - Safe Legal </title>
+    <title><?php echo isset($title) ? $title : 'Student Registration'; ?> - Safe Legal Solutions</title>
     
     <!-- Bootstrap & FontAwesome -->
     <link href="<?php echo base_url('assets/css/bootstrap.min.css'); ?>" rel="stylesheet">
@@ -19,10 +19,10 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #333;
             padding: 30px 15px;
-            line-height: 1.6;
+            min-height: 100vh;
         }
         
         .registration-wrapper {
@@ -32,24 +32,37 @@
         
         .registration-container {
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
             overflow: hidden;
         }
         
-        /* Header - Professional Black */
+        /* Header */
         .registration-header {
             background: #1a1a1a;
             color: white;
             padding: 40px 30px;
             text-align: center;
-            border-bottom: 4px solid #d4af37; /* Gold accent */
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .registration-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(26, 26, 26, 0) 100%);
         }
         
         .registration-header .logo-icon {
             font-size: 50px;
             margin-bottom: 15px;
             color: #d4af37;
+            position: relative;
+            z-index: 1;
         }
         
         .registration-header h1 {
@@ -57,12 +70,16 @@
             font-size: 32px;
             font-weight: 600;
             letter-spacing: 0.5px;
+            position: relative;
+            z-index: 1;
         }
         
         .registration-header p {
             margin: 0;
             font-size: 16px;
             opacity: 0.9;
+            position: relative;
+            z-index: 1;
         }
         
         /* Body */
@@ -72,11 +89,12 @@
         
         /* Branch Info Banner */
         .branch-info {
-            background: #f8f9fa;
-            border-left: 4px solid #1a1a1a;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 4px solid #d4af37;
             padding: 20px;
             margin-bottom: 30px;
-            border-radius: 4px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
         
         .branch-info strong {
@@ -85,7 +103,7 @@
         }
         
         .branch-info .branch-name {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 600;
             color: #1a1a1a;
             margin: 8px 0;
@@ -98,10 +116,13 @@
             border-radius: 3px;
             font-size: 12px;
             margin-left: 10px;
+            display: inline-block;
         }
         
         .branch-info small {
             color: #666;
+            display: block;
+            margin-top: 8px;
         }
         
         /* Error Messages */
@@ -109,28 +130,34 @@
             background: #fff3cd;
             color: #856404;
             padding: 15px 20px;
-            border-radius: 4px;
+            border-radius: 8px;
             margin-bottom: 25px;
             border-left: 4px solid #ffc107;
+            box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
         }
         
         .error-message i {
             margin-right: 8px;
         }
         
-        /* Form Panels */
+        .error-message ul {
+            margin: 10px 0 0 20px;
+            padding: 0;
+        }
+        
+        /* Form Sections */
         .form-section {
-            margin-bottom: 25px;
+            margin-bottom: 30px;
             border: 1px solid #e0e0e0;
-            border-radius: 6px;
+            border-radius: 8px;
             overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
         
         .form-section-header {
-            background: #1a1a1a;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
             color: white;
             padding: 15px 20px;
-            border-bottom: 3px solid #d4af37;
         }
         
         .form-section-header h4 {
@@ -165,13 +192,14 @@
         .form-group label .text-danger {
             color: #dc3545;
             margin-right: 3px;
+            font-size: 16px;
         }
         
         .form-control {
             width: 100%;
             padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
             font-size: 15px;
             transition: all 0.3s ease;
             background: white;
@@ -179,8 +207,8 @@
         
         .form-control:focus {
             outline: none;
-            border-color: #1a1a1a;
-            box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.1);
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         
         .form-control::placeholder {
@@ -199,7 +227,7 @@
             display: block;
         }
         
-        /* Package List - Simple Compact Version */
+        /* Package List */
         .package-list {
             display: flex;
             flex-direction: column;
@@ -208,19 +236,21 @@
         
         .package-item {
             border: 2px solid #e0e0e0;
-            border-radius: 6px;
+            border-radius: 8px;
             transition: all 0.3s ease;
+            cursor: pointer;
         }
         
         .package-item:hover {
-            border-color: #d4af37;
-            box-shadow: 0 2px 10px rgba(212, 175, 55, 0.1);
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transform: translateY(-2px);
         }
         
         .package-item:has(input:checked) {
-            border-color: #1a1a1a;
-            background: #f8f9fa;
-            box-shadow: 0 2px 10px rgba(26, 26, 26, 0.1);
+            border-color: #667eea;
+            background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
         }
         
         .package-option {
@@ -238,6 +268,7 @@
             height: 20px;
             cursor: pointer;
             flex-shrink: 0;
+            accent-color: #667eea;
         }
         
         .package-details {
@@ -258,16 +289,17 @@
         }
         
         .duration-badge {
-            background: #e0e0e0;
-            padding: 3px 10px;
-            border-radius: 3px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
             font-size: 12px;
-            color: #666;
+            font-weight: 500;
         }
         
         .price-tag {
             margin-left: auto;
-            font-size: 22px;
+            font-size: 24px;
             font-weight: bold;
             color: #28a745;
         }
@@ -289,13 +321,13 @@
         .feature-tag {
             background: #f0f0f0;
             padding: 5px 12px;
-            border-radius: 3px;
+            border-radius: 4px;
             font-size: 12px;
             color: #555;
         }
         
         .feature-tag i {
-            color: #d4af37;
+            color: #28a745;
             margin-right: 5px;
         }
         
@@ -318,23 +350,22 @@
         
         /* Submit Button */
         .btn-register {
-            background: #1a1a1a;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 16px 40px;
             font-size: 18px;
             font-weight: 500;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             width: 100%;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(26, 26, 26, 0.2);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
         
         .btn-register:hover {
-            background: #000;
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(26, 26, 26, 0.3);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
             color: white;
         }
         
@@ -352,11 +383,11 @@
             margin-top: 25px;
             padding: 15px;
             background: #f8f9fa;
-            border-radius: 4px;
+            border-radius: 8px;
         }
         
         .security-note i {
-            color: #d4af37;
+            color: #28a745;
             margin-right: 8px;
         }
         
@@ -368,25 +399,36 @@
         /* Required Field Indicator */
         .required-indicator {
             color: #dc3545;
-            font-size: 11px;
+            font-size: 12px;
             margin-top: 10px;
             display: block;
+            text-align: center;
         }
         
+        .required-indicator i {
+            margin-right: 5px;
+        }
+        
+        /* Alert */
         .alert {
-            padding: 15px;
-            border-radius: 4px;
+            padding: 15px 20px;
+            border-radius: 8px;
             margin-bottom: 20px;
+            border-left: 4px solid;
         }
         
         .alert-warning {
             background: #fff3cd;
             color: #856404;
-            border: 1px solid #ffeaa7;
+            border-color: #ffc107;
         }
         
         /* Responsive */
         @media (max-width: 768px) {
+            body {
+                padding: 15px 10px;
+            }
+            
             .registration-body {
                 padding: 25px 20px;
             }
@@ -396,7 +438,7 @@
             }
             
             .registration-header h1 {
-                font-size: 26px;
+                font-size: 24px;
             }
             
             .form-section-body {
@@ -428,14 +470,14 @@
             <div class="logo-icon">
                 <i class="fa fa-balance-scale"></i>
             </div>
-            <h1>Candidate Registration</h1>
+            <h1>Student Registration</h1>
             <p>Safe Legal Solutions - Professional Legal Education</p>
         </div>
         
         <!-- Body -->
         <div class="registration-body">
             <!-- Error Messages -->
-            <?php if (isset($error)): ?>
+            <?php if (isset($error) && !empty($error)): ?>
                 <div class="error-message">
                     <i class="fa fa-exclamation-triangle"></i> 
                     <strong>Error:</strong> <?php echo $error; ?>
@@ -445,6 +487,7 @@
             <?php if (validation_errors()): ?>
                 <div class="error-message">
                     <i class="fa fa-exclamation-triangle"></i> 
+                    <strong>Please correct the following errors:</strong>
                     <?php echo validation_errors(); ?>
                 </div>
             <?php endif; ?>
@@ -454,14 +497,16 @@
                 <strong><i class="fa fa-building"></i> Registering Under:</strong>
                 <div class="branch-name">
                     <?php echo htmlspecialchars($branch->branch_name); ?>
-                    <?php if (isset($branch->category_name)): ?>
+                    <?php if (isset($branch->category_name) && !empty($branch->category_name)): ?>
                         <span class="label"><?php echo htmlspecialchars($branch->category_name); ?></span>
                     <?php endif; ?>
                 </div>
-                <small>
-                    <i class="fa fa-user"></i> Partner Manager: 
-                    <?php echo htmlspecialchars($branch->manager_firstname . ' ' . $branch->manager_lastname); ?>
-                </small>
+                <?php if (isset($branch->manager_firstname) && !empty($branch->manager_firstname)): ?>
+                    <small>
+                        <i class="fa fa-user"></i> Partner Manager: 
+                        <?php echo htmlspecialchars($branch->manager_firstname . ' ' . $branch->manager_lastname); ?>
+                    </small>
+                <?php endif; ?>
             </div>
             
             <!-- Registration Form -->
@@ -487,7 +532,8 @@
                                            class="form-control" 
                                            required
                                            placeholder="Enter your full name"
-                                           value="<?php echo isset($form_data['student_name']) ? htmlspecialchars($form_data['student_name']) : ''; ?>">
+                                           value="<?php echo isset($form_data['student_name']) ? htmlspecialchars($form_data['student_name']) : set_value('student_name'); ?>">
+                                    <small class="text-muted">As per official documents</small>
                                 </div>
                             </div>
 
@@ -501,11 +547,13 @@
                                            id="date_of_birth" 
                                            class="form-control" 
                                            required
-                                           max="<?php echo date('Y-m-d'); ?>"
-                                           value="<?php echo isset($form_data['date_of_birth']) ? $form_data['date_of_birth'] : ''; ?>">
+                                           max="<?php echo date('Y-m-d', strtotime('-18 years')); ?>"
+                                           value="<?php echo isset($form_data['date_of_birth']) ? $form_data['date_of_birth'] : set_value('date_of_birth'); ?>">
                                     <small class="text-muted">You must be at least 18 years old</small>
                                 </div>
-                                  <!-- Passport Number Row -->
+                            </div>
+                        </div>
+
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group">
@@ -519,12 +567,12 @@
                                            required
                                            placeholder="Enter your passport number"
                                            pattern="[A-Z0-9]+"
+                                           minlength="6"
+                                           maxlength="50"
                                            style="text-transform: uppercase;"
-                                           value="<?php echo isset($form_data['passport_number']) ? htmlspecialchars($form_data['passport_number']) : ''; ?>">
+                                           value="<?php echo isset($form_data['passport_number']) ? htmlspecialchars($form_data['passport_number']) : set_value('passport_number'); ?>">
                                     <small class="text-muted">Valid passport number (letters and numbers only, minimum 6 characters)</small>
                                 </div>
-                            </div>
-                        </div>
                             </div>
                         </div>
                     </div>
@@ -549,9 +597,9 @@
                                            id="email" 
                                            class="form-control" 
                                            required
-                                           placeholder="candidate@example.com"
-                                           value="<?php echo isset($form_data['email']) ? htmlspecialchars($form_data['email']) : ''; ?>">
-                                    <small class="text-muted">Must be a valid email address</small>
+                                           placeholder="your.email@example.com"
+                                           value="<?php echo isset($form_data['email']) ? htmlspecialchars($form_data['email']) : set_value('email'); ?>">
+                                    <small class="text-muted">Your login credentials will be sent here</small>
                                 </div>
                             </div>
 
@@ -567,7 +615,7 @@
                                            required
                                            placeholder="+91 9876543210"
                                            pattern="[0-9+\-\s()]+"
-                                           value="<?php echo isset($form_data['phone']) ? htmlspecialchars($form_data['phone']) : ''; ?>">
+                                           value="<?php echo isset($form_data['phone']) ? htmlspecialchars($form_data['phone']) : set_value('phone'); ?>">
                                     <small class="text-muted">10 digit mobile number</small>
                                 </div>
                             </div>
@@ -584,23 +632,23 @@
                                               class="form-control" 
                                               rows="3" 
                                               required
-                                              placeholder="Enter your complete residential address"><?php echo isset($form_data['address']) ? htmlspecialchars($form_data['address']) : ''; ?></textarea>
+                                              placeholder="Enter your complete residential address"><?php echo isset($form_data['address']) ? htmlspecialchars($form_data['address']) : set_value('address'); ?></textarea>
+                                    <small class="text-muted">Street, City, State, Pincode</small>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
             
                 <!-- Package Selection -->
                 <div class="form-section">
                     <div class="form-section-header">
                         <h4>
-                            <i class="fa fa-shopping-cart"></i> Select Your Package
+                            <i class="fa fa-graduation-cap"></i> Select Your Package
                         </h4>
                     </div>
                     <div class="form-section-body">
-                        <?php if (!empty($items)): ?>
+                        <?php if (!empty($items) && is_array($items)): ?>
                             <div class="package-list">
                                 <?php foreach ($items as $item): ?>
                                     <div class="package-item">
@@ -609,13 +657,16 @@
                                                    name="item_id" 
                                                    value="<?php echo $item->id; ?>" 
                                                    <?php echo (isset($form_data['item_id']) && $form_data['item_id'] == $item->id) ? 'checked' : ''; ?>
+                                                   <?php echo (set_value('item_id') == $item->id) ? 'checked' : ''; ?>
                                                    required>
                                             
                                             <div class="package-details">
                                                 <div class="package-name-price">
                                                     <strong><?php echo htmlspecialchars($item->item_name); ?></strong>
                                                     <?php if (!empty($item->duration_months)): ?>
-                                                        <span class="duration-badge"><?php echo $item->duration_months; ?> months</span>
+                                                        <span class="duration-badge">
+                                                            <i class="fa fa-clock-o"></i> <?php echo $item->duration_months; ?> months
+                                                        </span>
                                                     <?php endif; ?>
                                                     <span class="price-tag">₹<?php echo number_format($item->total_price, 2); ?></span>
                                                 </div>
@@ -627,8 +678,10 @@
                                                 <?php endif; ?>
                                                 
                                                 <?php if (!empty($item->features)): ?>
-                                                    <?php $features = json_decode($item->features, true); ?>
-                                                    <?php if (!empty($features)): ?>
+                                                    <?php 
+                                                    $features = json_decode($item->features, true); 
+                                                    if (!empty($features) && is_array($features)):
+                                                    ?>
                                                         <div class="package-mini-features">
                                                             <?php foreach (array_slice($features, 0, 3) as $feature): ?>
                                                                 <span class="feature-tag">
@@ -636,7 +689,9 @@
                                                                 </span>
                                                             <?php endforeach; ?>
                                                             <?php if (count($features) > 3): ?>
-                                                                <span class="feature-tag more">+<?php echo count($features) - 3; ?> more</span>
+                                                                <span class="feature-tag more">
+                                                                    +<?php echo count($features) - 3; ?> more features
+                                                                </span>
                                                             <?php endif; ?>
                                                         </div>
                                                     <?php endif; ?>
@@ -674,7 +729,7 @@
                 <!-- Submit Button -->
                 <div class="form-group" style="margin-top: 30px;">
                     <button type="submit" class="btn btn-register">
-                        <i class="fa fa-arrow-right"></i> Complete Registration
+                        <i class="fa fa-arrow-right"></i> Proceed to Review
                     </button>
                 </div>
             
@@ -697,6 +752,11 @@
 
 <script>
 $(document).ready(function() {
+    // Auto-uppercase passport number
+    $('#passport_number').on('input', function() {
+        this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    });
+    
     // Form validation
     $('#registration-form').on('submit', function(e) {
         // Check if package is selected
@@ -721,12 +781,14 @@ $(document).ready(function() {
         
         // Phone validation
         var phone = $('#phone').val();
-        if (phone.replace(/[^0-9]/g, '').length < 10) {
+        var phoneDigits = phone.replace(/[^0-9]/g, '');
+        if (phoneDigits.length < 10) {
             e.preventDefault();
             alert('Please enter a valid 10-digit phone number');
             $('#phone').focus();
             return false;
         }
+        
         // Passport validation
         var passport = $('#passport_number').val();
         if (!passport || passport.trim() === '') {
@@ -741,6 +803,7 @@ $(document).ready(function() {
             $('#passport_number').focus();
             return false;
         }
+        
         // Age validation
         var dob = new Date($('#date_of_birth').val());
         var today = new Date();
@@ -752,19 +815,23 @@ $(document).ready(function() {
         
         if (age < 18) {
             e.preventDefault();
-            alert('Candidate must be at least 18 years old');
+            alert('You must be at least 18 years old to register. Current age: ' + age + ' years.');
             $('#date_of_birth').focus();
             return false;
         }
         
         return true;
     });
-});
-
-// Auto-uppercase passport number
-    $('#passport_number').on('input', function() {
-        this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    
+    // Package selection highlight
+    $('input[name="item_id"]').on('change', function() {
+        $('.package-item').removeClass('selected');
+        $(this).closest('.package-item').addClass('selected');
     });
+    
+    // Add initial selected class
+    $('input[name="item_id"]:checked').closest('.package-item').addClass('selected');
+});
 </script>
 
 </body>
