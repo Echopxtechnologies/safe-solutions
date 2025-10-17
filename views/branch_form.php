@@ -28,12 +28,12 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="category_id" class="control-label">
-                                        <span class="text-danger">*</span> Category
+                                        <span class="text-danger">*</span> Partner Type 
                                     </label>
                                     <div class="input-group">
                                         <select name="category_id" id="category_id" class="form-control selectpicker" 
                                                 data-live-search="true" required>
-                                            <option value="">Select Category</option>
+                                            <option value="">Select Partner Type </option>
                                             <?php foreach ($categories as $cat): ?>
                                                 <option value="<?php echo $cat->id; ?>" 
                                                         <?php echo (isset($branch) && $branch->category_id == $cat->id) ? 'selected' : ''; ?>>
@@ -42,7 +42,7 @@
                                             <?php endforeach; ?>
                                         </select>
                                         <div class="input-group-btn">
-                                            <button type="button" class="btn btn-success" data-toggle="modal" data-target="#categoryModal" title="Create New Category">
+                                            <button type="button" class="btn btn-success" data-toggle="modal" data-target="#categoryModal" title="Create New Partner Type ">
                                                 <i class="fa fa-plus"></i>
                                             </button>
                                         </div>
@@ -57,7 +57,7 @@
                                     </label>
                                     <input type="text" name="branch_name" id="branch_name" 
                                            class="form-control" required
-                                           placeholder="e.g., Mumbai Branch"
+                                           placeholder="e.g., Anush/hdfc bank(rajajingar)"
                                            value="<?php echo isset($branch) ? htmlspecialchars($branch->branch_name) : ''; ?>">
                                 </div>
                             </div>
@@ -97,7 +97,7 @@
                                         Address
                                     </label>
                                     <textarea name="address" id="address" class="form-control" rows="3" 
-                                              placeholder="Complete branch address"><?php echo isset($branch) ? htmlspecialchars($branch->address) : ''; ?></textarea>
+                                              placeholder="Complete Partner address"><?php echo isset($branch) ? htmlspecialchars($branch->address) : ''; ?></textarea>
                                 </div>
                             </div>
 
@@ -286,10 +286,10 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label for="new_category_name" class="control-label">
-                        <span class="text-danger">*</span> Category Name
+                        <span class="text-danger">*</span>Partner Type 
                     </label>
                     <input type="text" class="form-control" id="new_category_name" 
-                           placeholder="Enter category name" required>
+                           placeholder="Enter Partner Type" required>
                 </div>
                 <div class="alert alert-danger hide" id="category_error"></div>
             </div>

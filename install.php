@@ -337,9 +337,12 @@ log_message('info', 'Inserting default categories...');
 
 try {
     $categories = [
-        ['name' => 'IDFC Bank', 'color_code' => '#dc3545', 'description' => 'IDFC Bank Branches', 'created_by' => 1, 'is_active' => 1],
-        ['name' => 'HDFC Bank', 'color_code' => '#007bff', 'description' => 'HDFC Bank Branches', 'created_by' => 1, 'is_active' => 1],
-        ['name' => 'Safe Legal', 'color_code' => '#28a745', 'description' => 'Safe Legal Solutions Head Office', 'created_by' => 1, 'is_active' => 1],
+        ['name' => 'Individual Consultant', 'color_code' => '#6f42c1', 'description' => 'Independent Consultants', 'created_by' => 1, 'is_active' => 1],
+        ['name' => 'Education Agency', 'color_code' => '#fd7e14', 'description' => 'Educational Agencies and Institutions', 'created_by' => 1, 'is_active' => 1],
+        ['name' => 'Training Institute', 'color_code' => '#20c997', 'description' => 'Training and Coaching Institutes', 'created_by' => 1, 'is_active' => 1],
+        ['name' => 'Bank/Financial Institution', 'color_code' => '#007bff', 'description' => 'Banks and Financial Service Providers', 'created_by' => 1, 'is_active' => 1],
+        ['name' => 'Partner Consultant', 'color_code' => '#dc3545', 'description' => 'Partner Consulting Firms', 'created_by' => 1, 'is_active' => 1],
+        ['name' => 'Safe Legal ⭐', 'color_code' => '#d2d214ff', 'description' => 'Safe Legal Solutions Head Office', 'created_by' => 1, 'is_active' => 1],
     ];
     
     foreach ($categories as $cat) {
@@ -359,7 +362,7 @@ try {
     // Get the "Safe Legal Solutions" category ID (should be 3 if inserting fresh)
     $CI->db->where('name', 'Safe Legal Solutions');
     $sls_category = $CI->db->get($table1)->row();
-    $category_id = $sls_category ? $sls_category->id : 3;
+    $category_id = $sls_category ? $sls_category->id : 6;
     
     $default_branch_data = [
         'category_id' => $category_id, // Safe Legal category
