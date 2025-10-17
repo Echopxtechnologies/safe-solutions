@@ -190,7 +190,10 @@ hooks()->add_filter('customers_area_navigation', function ($nav) {
 
 /**
  * Add SLS Navigation Buttons to Client Area Header
- * Adds 3 buttons: My Dashboard, My Profile, My Referral Card
+ * ✅ FIXED: Removed Referral Card button, improved styling, reduced button height
+ * ✅ FIXED: Hide Company Details, GDPR, and Announcements using CSS + JavaScript
+ * Shows only 2 buttons: My Dashboard and My Profile
+ * Profile dropdown shows only: Profile and Logout
  */
 hooks()->add_action('app_customers_head', 'safelegalsolutions_add_client_navigation');
 
@@ -199,7 +202,6 @@ function safelegalsolutions_add_client_navigation()
     // Build correct URLs for client area
     $dashboardUrl = site_url('safelegalsolutions/safelegalsolutions_client/my_dashboard');
     $profileUrl   = site_url('safelegalsolutions/safelegalsolutions_client/my_profile');
-    $referralUrl  = site_url('safelegalsolutions/safelegalsolutions_client/referral_card');
     
     echo '
     <style>
@@ -212,86 +214,163 @@ function safelegalsolutions_add_client_navigation()
       }
       
       /* ============================================
-         SLS Navigation Buttons Styling
+         ✅ FIXED: Hide Company Details, GDPR, and Announcements
+         from Client Profile Dropdown Menu
          ============================================ */
       
-      /* Base button style */
+      /* Hide by href patterns */
+      .customers-top-navbar a[href*="clients/company"],
+      .customers-top-navbar a[href*="clients/gdpr"],
+      .customers-top-navbar a[href*="clients/announcements"],
+      a[href*="clients/company"],
+      a[href*="clients/gdpr"],
+      a[href*="clients/announcements"] {
+        display: none !important;
+      }
+      
+      /* Hide by menu item classes */
+      .customers-nav-item-company,
+      .customers-nav-item-gdpr,
+      .customers-nav-item-announcements,
+      li.customers-nav-item-company,
+      li.customers-nav-item-gdpr,
+      li.customers-nav-item-announcements {
+        display: none !important;
+      }
+      
+      /* Hide parent <li> elements containing these links */
+      li:has(a[href*="clients/company"]),
+      li:has(a[href*="clients/gdpr"]),
+      li:has(a[href*="clients/announcements"]) {
+        display: none !important;
+      }
+      
+      /* ============================================
+         ✅ IMPROVED: SLS Navigation Buttons Styling
+         - Reduced height for cleaner look
+         - Better spacing and alignment
+         - Improved hover effects
+         ============================================ */
+      
+      /* Base button style - REDUCED HEIGHT */
       .navbar .navbar-right .sls-nav-btn {
         color: #fff !important;
-        border-radius: 6px;
-        padding: 7px 15px;
+        border-radius: 4px;
+        padding: 6px 14px;              /* ✅ Reduced from 7px 15px */
         margin-right: 8px;
         font-weight: 500;
-        transition: all 0.3s ease;
-        display: inline-block;
+        transition: all 0.25s ease;
+        display: inline-flex;           /* ✅ Better alignment */
+        align-items: center;            /* ✅ Vertical centering */
         text-decoration: none;
         font-size: 13px;
+        line-height: 1.4;               /* ✅ Control line height */
+        height: 32px;                   /* ✅ Fixed height for consistency */
+        box-sizing: border-box;
       }
       
       .navbar .navbar-right .sls-nav-btn:hover {
         text-decoration: none;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        transform: translateY(-1px);    /* ✅ Subtle lift */
+        box-shadow: 0 3px 10px rgba(0,0,0,0.2);  /* ✅ Softer shadow */
       }
       
-      /* Dashboard Button - Blue */
+      /* Dashboard Button - Modern Blue */
       .navbar .navbar-right .sls-dashboard-btn {
-        background-color: #0d6efd;
-        border: 1px solid #0d6efd;
+        background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);  /* ✅ Gradient */
+        border: none;                   /* ✅ Remove border */
       }
       
       .navbar .navbar-right .sls-dashboard-btn:hover {
-        background-color: #0b5ed7;
-        border-color: #0a58ca;
+        background: linear-gradient(135deg, #357ABD 0%, #2868A8 100%);
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);  /* ✅ Colored shadow */
       }
       
-      /* Profile Button - Green */
+      /* Profile Button - Modern Green */
       .navbar .navbar-right .sls-profile-btn {
-        background-color: #28a745;
-        border: 1px solid #28a745;
+        background: linear-gradient(135deg, #27AE60 0%, #1E8449 100%);  /* ✅ Gradient */
+        border: none;                   /* ✅ Remove border */
       }
       
       .navbar .navbar-right .sls-profile-btn:hover {
-        background-color: #218838;
-        border-color: #1e7e34;
+        background: linear-gradient(135deg, #1E8449 0%, #186A3B 100%);
+        box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);  /* ✅ Colored shadow */
       }
       
-      /* Referral Button - Orange */
-      .navbar .navbar-right .sls-referral-btn {
-        background-color: #ff9800;
-        border: 1px solid #ff9800;
-      }
-      
-      .navbar .navbar-right .sls-referral-btn:hover {
-        background-color: #fb8c00;
-        border-color: #f57c00;
-      }
-      
-      /* Icon spacing */
+      /* Icon spacing and sizing */
       .navbar .navbar-right .sls-nav-btn i {
-        margin-right: 5px;
+        margin-right: 6px;
+        font-size: 13px;               /* ✅ Icon size */
       }
       
-      /* Mobile responsive */
+      /* ✅ Better mobile responsive */
       @media (max-width: 768px) {
         .navbar .navbar-right .sls-nav-btn {
           padding: 5px 10px;
-          font-size: 11px;
+          font-size: 12px;
           margin-right: 5px;
+          height: 28px;                 /* ✅ Smaller on mobile */
+        }
+        
+        .navbar .navbar-right .sls-nav-btn i {
+          margin-right: 4px;
+          font-size: 12px;
+        }
+      }
+      
+      @media (max-width: 480px) {
+        .navbar .navbar-right .sls-nav-btn {
+          padding: 4px 8px;
+          font-size: 11px;
+          margin-right: 4px;
+          height: 26px;                 /* ✅ Even smaller */
         }
         
         .navbar .navbar-right .sls-nav-btn i {
           margin-right: 3px;
+          font-size: 11px;
         }
       }
     </style>
     
     <script>
       document.addEventListener("DOMContentLoaded", function () {
-        // Find navbar right container
-        var rightNav = document.querySelector(".customers-top-navbar .navbar-right, .header .navbar-right");
         
-        // Check if user is logged in (profile menu exists)
+        // ============================================
+        // STEP 1: Remove Company, GDPR, Announcements
+        // ============================================
+        function removeUnwantedMenuItems() {
+          var allLinks = document.querySelectorAll("a");
+          
+          var urlsToRemove = [
+            "clients/company",
+            "clients/gdpr",
+            "clients/announcements"
+          ];
+          
+          allLinks.forEach(function(link) {
+            var href = link.getAttribute("href");
+            if (href) {
+              urlsToRemove.forEach(function(urlPattern) {
+                if (href.indexOf(urlPattern) !== -1) {
+                  var parentLi = link.closest("li");
+                  if (parentLi) {
+                    parentLi.remove();
+                    console.log("SLS: Removed menu item - " + urlPattern);
+                  }
+                }
+              });
+            }
+          });
+        }
+        
+        removeUnwantedMenuItems();
+        setTimeout(removeUnwantedMenuItems, 500);
+        
+        // ============================================
+        // STEP 2: Add Navigation Buttons
+        // ============================================
+        var rightNav = document.querySelector(".customers-top-navbar .navbar-right, .header .navbar-right");
         var hasProfile = document.querySelector("li.customers-nav-item-profile");
         
         if (!rightNav || !hasProfile) {
@@ -299,15 +378,12 @@ function safelegalsolutions_add_client_navigation()
             return;
         }
 
-        // Prevent duplicate buttons
         if (document.querySelector("li.customers-nav-item-sls-dashboard")) {
             console.log("SLS: Navigation already added");
             return;
         }
 
-        // ============================================
         // CREATE DASHBOARD BUTTON
-        // ============================================
         var liDashboard = document.createElement("li");
         liDashboard.className = "customers-nav-item-sls-dashboard";
         
@@ -315,13 +391,11 @@ function safelegalsolutions_add_client_navigation()
         aDashboard.href = "' . $dashboardUrl . '";
         aDashboard.className = "btn sls-nav-btn sls-dashboard-btn";
         aDashboard.title = "View your registration overview";
-        aDashboard.innerHTML = "<i class=\"fa fa-dashboard\"></i> My Dashboard";
+        aDashboard.innerHTML = "<i class=\\"fa fa-dashboard\\"></i> My Dashboard";
         
         liDashboard.appendChild(aDashboard);
 
-        // ============================================
         // CREATE PROFILE BUTTON
-        // ============================================
         var liProfile = document.createElement("li");
         liProfile.className = "customers-nav-item-sls-profile";
         
@@ -329,30 +403,12 @@ function safelegalsolutions_add_client_navigation()
         aProfile.href = "' . $profileUrl . '";
         aProfile.className = "btn sls-nav-btn sls-profile-btn";
         aProfile.title = "View your complete profile";
-        aProfile.innerHTML = "<i class=\"fa fa-user\"></i> My Profile";
+        aProfile.innerHTML = "<i class=\\"fa fa-user\\"></i> My Profile";
         
         liProfile.appendChild(aProfile);
 
-        // ============================================
-        // CREATE REFERRAL CARD BUTTON
-        // ============================================
-        var liReferral = document.createElement("li");
-        liReferral.className = "customers-nav-item-sls-referral";
-        
-        var aReferral = document.createElement("a");
-        aReferral.href = "' . $referralUrl . '";
-        aReferral.className = "btn sls-nav-btn sls-referral-btn";
-        aReferral.title = "Download your referral card";
-        aReferral.innerHTML = "<i class=\"fa fa-id-card\"></i> Referral Card";
-        
-        liReferral.appendChild(aReferral);
-
-        // ============================================
-        // ADD ALL BUTTONS TO NAVBAR (in order)
-        // ============================================
-        rightNav.prepend(liReferral);  // Add last (appears third)
-        rightNav.prepend(liProfile);   // Add second
-        rightNav.prepend(liDashboard); // Add first
+        rightNav.prepend(liProfile);
+        rightNav.prepend(liDashboard);
         
         console.log("SafeLegalSolutions: Navigation buttons added successfully");
       });
@@ -480,6 +536,8 @@ function safelegalsolutions_init_menu_items()
  * Hide unwanted menu items for NPM and MANAGER using CSS
  * Only System Admin sees all Perfex menus
  * Manager and NPM only see Safe Legal menu
+ * ✅ FIXED: Hide "My Profile" and "My Timesheet" from admin profile dropdown
+ * Keep only "Edit Profile" and "Logout" for non-admin users
  */
 hooks()->add_action('app_admin_head', 'safelegalsolutions_hide_npm_menus_css');
 
@@ -501,7 +559,9 @@ function safelegalsolutions_hide_npm_menus_css()
     // Hide all menus except SLS for both Manager and NPM
     if ($is_manager || $is_npm) {
         echo '<style>
-            /* Hide all sidebar menu items except Safe Legal */
+            /* ============================================
+               Hide Sidebar Menus (except Safe Legal)
+               ============================================ */
             #side-menu > li:not(.menu-item-safelegalsolutions) {
                 display: none !important;
             }
@@ -520,7 +580,83 @@ function safelegalsolutions_hide_npm_menus_css()
             #side-menu > li.menu-item-safelegalsolutions {
                 display: block !important;
             }
-        </style>';
+            
+            /* ============================================
+               ✅ NEW: Hide My Profile and My Timesheet
+               from Admin Profile Dropdown
+               ============================================ */
+            
+            /* Hide by href patterns */
+            .navbar-nav a[href*="/admin/profile"],
+            .navbar-nav a[href*="/admin/staff/timesheets"],
+            a[href*="/admin/profile"]:not([href*="/admin/profile/edit"]),
+            a[href*="/admin/staff/timesheets"] {
+                display: none !important;
+            }
+            
+            /* Hide parent <li> elements */
+            .navbar-nav li:has(> a[href*="/admin/profile"]:not([href*="edit"])),
+            .navbar-nav li:has(> a[href*="/admin/staff/timesheets"]) {
+                display: none !important;
+            }
+            
+            /* Hide by common class patterns (if any) */
+            .dropdown-menu li a[href$="/profile"],
+            .dropdown-menu li a[href*="staff/timesheets"] {
+                display: none !important;
+            }
+        </style>
+        
+        <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            // ============================================
+            // Remove My Profile and My Timesheet from dropdown
+            // ============================================
+            function removeAdminProfileMenuItems() {
+                var allLinks = document.querySelectorAll(".navbar-nav a, .dropdown-menu a");
+                
+                allLinks.forEach(function(link) {
+                    var href = link.getAttribute("href");
+                    
+                    if (href) {
+                        // Remove "My Profile" (but keep "Edit Profile")
+                        if (href.indexOf("/admin/profile") !== -1 && href.indexOf("/admin/profile/edit") === -1) {
+                            var parentLi = link.closest("li");
+                            if (parentLi) {
+                                parentLi.remove();
+                                console.log("SLS: Removed My Profile menu item");
+                            }
+                        }
+                        
+                        // Remove "My Timesheet"
+                        if (href.indexOf("/admin/staff/timesheets") !== -1 || href.indexOf("timesheets") !== -1) {
+                            var parentLi = link.closest("li");
+                            if (parentLi) {
+                                parentLi.remove();
+                                console.log("SLS: Removed My Timesheet menu item");
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Run immediately
+            removeAdminProfileMenuItems();
+            
+            // Run again after dropdown opens (event delegation)
+            setTimeout(removeAdminProfileMenuItems, 500);
+            
+            // Listen for dropdown clicks to re-run cleanup
+            document.addEventListener("click", function(e) {
+                if (e.target.closest(".dropdown-toggle") || e.target.closest(".navbar-nav")) {
+                    setTimeout(removeAdminProfileMenuItems, 100);
+                }
+            });
+            
+            console.log("SLS: Admin profile menu cleanup initialized");
+        });
+        </script>';
     }
 }
 
@@ -717,6 +853,7 @@ hooks()->add_action('admin_init', 'safelegalsolutions_check_installation');
 function safelegalsolutions_check_installation()
 {
     $CI = &get_instance();
+
     
     // Check if main table exists
     if (!$CI->db->table_exists(db_prefix() . 'sls_branch_categories')) {

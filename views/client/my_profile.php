@@ -227,17 +227,6 @@
                         </h4>
                     </div>
                     <div class="panel-body">
-                        <div style="margin-bottom: 25px;">
-                            <h5 style="margin: 0 0 10px 0;">
-                                <i class="fa fa-check-circle"></i> Profile Completion
-                            </h5>
-                            <div class="progress" style="height: 30px;">
-                                <div class="progress-bar progress-bar-<?php echo ($student->profile_completion == 100) ? 'success' : 'warning'; ?>" 
-                                     style="width: <?php echo $student->profile_completion; ?>%; line-height: 30px; font-size: 16px;">
-                                    <?php echo $student->profile_completion; ?>%
-                                </div>
-                            </div>
-                        </div>
 
                         <div style="margin-bottom: 25px;">
                             <h5 style="margin: 0 0 10px 0;">
@@ -460,17 +449,7 @@
                                 </div>
                             </div>
                             
-                            <div class="col-md-6">
-                                <h4>Referral Earnings</h4>
-                                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 8px; text-align: center; color: white;">
-                                    <h1 style="margin: 0; font-size: 48px;">
-                                        ₹<?php echo isset($student->earnings) ? number_format($student->earnings, 2) : '0.00'; ?>
-                                    </h1>
-                                    <p style="margin: 10px 0 0 0; opacity: 0.9;">
-                                        Total Earnings from Referrals
-                                    </p>
-                                </div>
-                            </div>
+                           
                         </div>
                     </div>
                 </div>

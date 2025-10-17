@@ -1630,8 +1630,573 @@ public function generate_unique_id($passport_number = '')
     
     return $unique_id;
 }
+/**
+ * Create invoice WITH line items (proper invoice with items table)
+ * This creates invoice + items from student's package
+ * 
+ * @param int $client_id Client ID from tblclients
+ * @param float $amount Invoice amount
+ * @param int $student_id Student ID for reference
+ * @param string $description Invoice description
+ * @return array Result with invoice_id and invoice_number
+ */
+public function create_simple_invoice($client_id, $amount, $student_id, $description = 'Package Enrollment Payment')
+{
+    try {
+        // Check if invoice already exists for this student
+        $existing = $this->db->select('id, number, status')
+            ->from(db_prefix() . 'invoices')
+            ->where('clientid', $client_id)
+            ->like('adminnote', 'Student ID: ' . $student_id)
+            ->order_by('id', 'DESC')
+            ->limit(1)
+            ->get()
+            ->row();
+        
+        if ($existing) {
+            log_activity('Invoice already exists for Student ID: ' . $student_id . ' [Invoice #' . $existing->number . ']');
+            
+            return [
+                'success' => true,
+                'invoice_id' => $existing->id,
+                'invoice_number' => $existing->number,
+                'existing' => true
+            ];
+        }
+        
+        // Get student for additional info
+        $student = $this->get_student($student_id);
+        
+        if (!$student) {
+            return [
+                'success' => false,
+                'message' => 'Student not found'
+            ];
+        }
+        
+        // Get item/package info (REQUIRED for line items)
+        if (empty($student->item_id)) {
+            return [
+                'success' => false,
+                'message' => 'No package assigned to student. Cannot create invoice without item.'
+            ];
+        }
+        
+        $item = $this->get_item($student->item_id);
+        
+        if (!$item) {
+            return [
+                'success' => false,
+                'message' => 'Package not found'
+            ];
+        }
+        
+        // Get next invoice number
+        $next_number = get_option('next_invoice_number');
+        if (empty($next_number)) {
+            $next_number = 1;
+        }
+        
+        // Get invoice prefix
+        $prefix = get_option('invoice_prefix');
+        if (empty($prefix)) {
+            $prefix = 'INV-';
+        }
+        
+        // Format invoice number
+        $invoice_number_formatted = $prefix . str_pad($next_number, 6, '0', STR_PAD_LEFT);
+        
+        // Generate unique hash for invoice
+        $hash = app_generate_hash();
+        
+        // ============================================================
+        // PREPARE INVOICE DATA
+        // ============================================================
+        
+        $invoice_data = [
+            'clientid'          => $client_id,
+            'number'            => $next_number,
+            'prefix'            => $prefix,
+            'number_format'     => $next_number,
+            'date'              => date('Y-m-d'),
+            'duedate'           => date('Y-m-d'), // Due today since already paid
+            'currency'          => get_base_currency()->id,
+            'subtotal'          => $item->base_price,
+            'total'             => $item->total_price,
+            'adjustment'        => 0,
+            'discount_percent'  => 0,
+            'discount_total'    => 0,
+            'discount_type'     => '',
+            'status'            => 1, // 1 = Unpaid (will be marked paid after payment record)
+            'hash'              => $hash,
+            'addedfrom'         => $student->created_by ?? get_staff_user_id(),
+            'datecreated'       => date('Y-m-d H:i:s'),
+            'adminnote'         => 'Student ID: ' . $student_id . "\n" .
+                                   'Student Name: ' . $student->student_name . "\n" .
+                                   'Email: ' . $student->email . "\n" .
+                                   'Package: ' . $item->item_name . "\n" .
+                                   'Item Code: ' . $item->item_code . "\n" .
+                                   'Auto-generated invoice',
+            'clientnote'        => $description . "\n" .
+                                   'Package: ' . $item->item_name . "\n" .
+                                   'Thank you for your payment!',
+            'terms'             => get_option('predefined_terms_invoice'),
+            'sale_agent'        => $student->created_by ?? 0,
+            'billing_street'    => $student->address ?? '',
+            'billing_city'      => '',
+            'billing_state'     => '',
+            'billing_zip'       => '',
+            'billing_country'   => 0,
+            'shipping_street'   => $student->address ?? '',
+            'shipping_city'     => '',
+            'shipping_state'    => '',
+            'shipping_zip'      => '',
+            'shipping_country'  => 0,
+            'include_shipping'  => 0,
+            'show_shipping_on_invoice' => 0,
+            'show_quantity_as'  => 1,
+            'project_id'        => 0,
+            'recurring'         => 0,
+            'recurring_type'    => NULL,
+            'custom_recurring'  => 0,
+            'cycles'            => 0,
+            'total_cycles'      => 0,
+            'is_recurring_from' => NULL,
+            'subscription_id'   => 0,
+            'cancel_overdue_reminders' => 0,
+            'allowed_payment_modes' => serialize(['cash', 'bank_transfer']),
+        ];
+        
+        // Insert invoice
+        $this->db->insert(db_prefix() . 'invoices', $invoice_data);
+        $invoice_id = $this->db->insert_id();
+        
+        if (!$invoice_id) {
+            return [
+                'success' => false,
+                'message' => 'Failed to create invoice'
+            ];
+        }
+        
+        // ============================================================
+        // INSERT LINE ITEMS (Package Base Price + GST)
+        // ============================================================
+        
+        // Line Item 1: Package Base Price
+        $item_line_1 = [
+            'rel_id' => $invoice_id,
+            'rel_type' => 'invoice',
+            'description' => $item->item_name,
+            'long_description' => !empty($item->description) ? $item->description : 'Package enrollment and access for ' . $item->duration_months . ' months',
+            'qty' => 1, // Always 1 as per your requirement
+            'rate' => $item->base_price,
+            'unit' => 'Package',
+            'item_order' => 1
+        ];
+        
+        $this->db->insert(db_prefix() . 'itemable', $item_line_1);
+        
+        // Line Item 2: GST (if applicable)
+        if ($item->gst_amount > 0 && $item->gst_percentage > 0) {
+            $item_line_2 = [
+                'rel_id' => $invoice_id,
+                'rel_type' => 'invoice',
+                'description' => 'GST (' . $item->gst_percentage . '%)',
+                'long_description' => 'Goods and Services Tax',
+                'qty' => 1,
+                'rate' => $item->gst_amount,
+                'unit' => 'Tax',
+                'item_order' => 2
+            ];
+            
+            $this->db->insert(db_prefix() . 'itemable', $item_line_2);
+        }
+        
+        // ============================================================
+        // INCREMENT INVOICE NUMBER
+        // ============================================================
+        
+        $next_number_new = (int)$next_number + 1;
+        update_option('next_invoice_number', $next_number_new);
+        
+        log_activity('Invoice Created with Line Items [Invoice ID: ' . $invoice_id . ', Number: ' . $invoice_number_formatted . ', Student ID: ' . $student_id . ', Package: ' . $item->item_name . ', Amount: ₹' . number_format($item->total_price, 2) . ']');
+        
+        return [
+            'success' => true,
+            'invoice_id' => $invoice_id,
+            'invoice_number' => $invoice_number_formatted,
+            'invoice_hash' => $hash,
+            'existing' => false
+        ];
+        
+    } catch (Exception $e) {
+        log_activity('Invoice Creation Error for Student ID ' . $student_id . ': ' . $e->getMessage());
+        
+        return [
+            'success' => false,
+            'message' => 'Error creating invoice: ' . $e->getMessage()
+        ];
+    }
+}
+/**
+ * Record payment for invoice (marks invoice as paid)
+ * Uses existing Perfex payment modes from tblpayment_modes
+ * 
+ * @param int $invoice_id Invoice ID
+ * @param float $amount Payment amount
+ * @param string $transaction_id Transaction/reference ID
+ * @param string $payment_mode Your payment method (cash, bank_transfer, upi, card, online, other)
+ * @param array $payment_data Additional payment data (date, notes, etc.)
+ * @return bool Success status
+ */
+public function record_simple_payment($invoice_id, $amount, $transaction_id = '', $payment_mode = 'cash', $payment_data = [])
+{
+    try {
+        // ============================================================
+        // GET PAYMENT MODE ID FROM PERFEX'S tblpayment_modes
+        // ============================================================
+        
+        $payment_mode_id = $this->get_payment_mode_id($payment_mode);
+        
+        if (!$payment_mode_id) {
+            log_activity('Payment mode not found for: ' . $payment_mode . '. Using default.');
+            // Fallback to first available payment mode
+            $default_mode = $this->db->select('id')
+                ->from(db_prefix() . 'payment_modes')
+                ->where('active', 1)
+                ->order_by('id', 'ASC')
+                ->limit(1)
+                ->get()
+                ->row();
+            
+            $payment_mode_id = $default_mode ? $default_mode->id : 1;
+        }
+        
+        // ============================================================
+        // PREPARE PAYMENT RECORD
+        // ============================================================
+        
+        $payment_record = [
+            'invoiceid'     => $invoice_id,
+            'amount'        => $amount,
+            'paymentmode'   => $payment_mode_id, // This is the ID from tblpayment_modes
+            'paymentmethod' => '', // Keep empty for offline payments (used for gateway-specific data)
+            'date'          => isset($payment_data['payment_date']) ? date('Y-m-d', strtotime($payment_data['payment_date'])) : date('Y-m-d'),
+            'daterecorded'  => date('Y-m-d H:i:s'),
+            'note'          => $this->get_payment_note($payment_mode, $payment_data),
+            'transactionid' => $transaction_id
+        ];
+        
+        // Insert payment record
+        $this->db->insert(db_prefix() . 'invoicepaymentrecords', $payment_record);
+        $payment_record_id = $this->db->insert_id();
+        
+        if (!$payment_record_id) {
+            return false;
+        }
+        
+        // Update invoice status to Paid (status = 2)
+        $this->db->where('id', $invoice_id);
+        $this->db->update(db_prefix() . 'invoices', [
+            'status' => 2 // 2 = Paid in Perfex
+        ]);
+        
+        log_activity('Payment Recorded [Invoice ID: ' . $invoice_id . ', Payment ID: ' . $payment_record_id . ', Amount: ₹' . number_format($amount, 2) . ', Method: ' . ucfirst($payment_mode) . ' (Mode ID: ' . $payment_mode_id . ')]');
+        
+        return true;
+        
+    } catch (Exception $e) {
+        log_activity('Payment Recording Error for Invoice ID ' . $invoice_id . ': ' . $e->getMessage());
+        return false;
+    }
+}
 
+/**
+ * Get Perfex payment mode ID by your payment method name
+ * Maps your enum values to existing Perfex payment modes
+ * 
+ * @param string $payment_mode Your payment method (cash, bank_transfer, upi, card, online, other)
+ * @return int|null Payment mode ID from tblpayment_modes
+ */
+private function get_payment_mode_id($payment_mode)
+{
+    // ============================================================
+    // MAP YOUR PAYMENT METHODS TO PERFEX PAYMENT MODE NAMES
+    // ============================================================
+    
+    $payment_mode_mapping = [
+        'cash'           => 'Cash',
+        'bank_transfer'  => 'Bank Transfer',
+        'upi'            => 'UPI',
+        'card'           => 'Credit Card', // or 'Debit Card'
+        'online'         => 'Online Payment',
+        'cheque'         => 'Cheque',
+        'other'          => 'Other'
+    ];
+    
+    // Get the Perfex payment mode name
+    $perfex_mode_name = isset($payment_mode_mapping[$payment_mode]) 
+        ? $payment_mode_mapping[$payment_mode] 
+        : 'Cash';
+    
+    // Query tblpayment_modes to get the ID
+    $mode = $this->db->select('id, name')
+        ->from(db_prefix() . 'payment_modes')
+        ->where('active', 1)
+        ->group_start()
+            ->like('name', $perfex_mode_name, 'both')
+            ->or_where('name', $perfex_mode_name)
+        ->group_end()
+        ->order_by('id', 'ASC')
+        ->limit(1)
+        ->get()
+        ->row();
+    
+    if ($mode) {
+        return $mode->id;
+    }
+    
+    // ============================================================
+    // FALLBACK: If exact match not found, try partial match
+    // ============================================================
+    
+    // For 'card', try to find any card-related payment mode
+    if ($payment_mode === 'card') {
+        $card_mode = $this->db->select('id')
+            ->from(db_prefix() . 'payment_modes')
+            ->where('active', 1)
+            ->group_start()
+                ->like('name', 'card', 'both')
+                ->or_like('name', 'credit', 'both')
+                ->or_like('name', 'debit', 'both')
+            ->group_end()
+            ->order_by('id', 'ASC')
+            ->limit(1)
+            ->get()
+            ->row();
+        
+        if ($card_mode) {
+            return $card_mode->id;
+        }
+    }
+    
+    // For 'upi', try to find UPI or online payment
+    if ($payment_mode === 'upi') {
+        $upi_mode = $this->db->select('id')
+            ->from(db_prefix() . 'payment_modes')
+            ->where('active', 1)
+            ->group_start()
+                ->like('name', 'upi', 'both')
+                ->or_like('name', 'online', 'both')
+            ->group_end()
+            ->order_by('id', 'ASC')
+            ->limit(1)
+            ->get()
+            ->row();
+        
+        if ($upi_mode) {
+            return $upi_mode->id;
+        }
+    }
+    
+    // For 'bank_transfer', try to find bank-related payment mode
+    if ($payment_mode === 'bank_transfer') {
+        $bank_mode = $this->db->select('id')
+            ->from(db_prefix() . 'payment_modes')
+            ->where('active', 1)
+            ->group_start()
+                ->like('name', 'bank', 'both')
+                ->or_like('name', 'transfer', 'both')
+            ->group_end()
+            ->order_by('id', 'ASC')
+            ->limit(1)
+            ->get()
+            ->row();
+        
+        if ($bank_mode) {
+            return $bank_mode->id;
+        }
+    }
+    
+    // ============================================================
+    // ULTIMATE FALLBACK: Return first active payment mode (usually Cash)
+    // ============================================================
+    
+    $default = $this->db->select('id')
+        ->from(db_prefix() . 'payment_modes')
+        ->where('active', 1)
+        ->order_by('id', 'ASC')
+        ->limit(1)
+        ->get()
+        ->row();
+    
+    return $default ? $default->id : null;
+}
 
+/**
+ * Generate payment note based on payment method
+ * 
+ * @param string $payment_mode Payment method
+ * @param array $payment_data Additional payment data
+ * @return string Payment note
+ */
+private function get_payment_note($payment_mode, $payment_data = [])
+{
+    $note_parts = [];
+    
+    // Add base note
+    $note_parts[] = 'Payment recorded by admin';
+    
+    // Add payment method specific note
+    switch ($payment_mode) {
+        case 'cash':
+            $note_parts[] = 'Payment Method: Cash';
+            break;
+        case 'bank_transfer':
+            $note_parts[] = 'Payment Method: Bank Transfer';
+            break;
+        case 'upi':
+            $note_parts[] = 'Payment Method: UPI';
+            break;
+        case 'card':
+            $note_parts[] = 'Payment Method: Card Payment';
+            break;
+        case 'online':
+            $note_parts[] = 'Payment Method: Online Payment';
+            break;
+        case 'cheque':
+            $note_parts[] = 'Payment Method: Cheque';
+            break;
+        case 'other':
+            $note_parts[] = 'Payment Method: Other';
+            break;
+        default:
+            $note_parts[] = 'Payment Method: ' . ucfirst(str_replace('_', ' ', $payment_mode));
+    }
+    
+    // Add custom notes if provided
+    if (isset($payment_data['payment_notes']) && !empty($payment_data['payment_notes'])) {
+        $note_parts[] = $payment_data['payment_notes'];
+    }
+    
+    return implode(' | ', $note_parts);
+}
 
-
+/**
+ * Create invoice and record payment in one call
+ * This is the main method to use when student payment is complete
+ * 
+ * @param int $student_id Student ID
+ * @return array Result with success status, invoice_id, and invoice_number
+ */
+public function create_student_invoice($student_id)
+{
+    $student = $this->get_student($student_id);
+    
+    if (!$student) {
+        return [
+            'success' => false,
+            'message' => 'Student not found'
+        ];
+    }
+    
+    // Validate student has client account
+    if (empty($student->client_id)) {
+        return [
+            'success' => false,
+            'message' => 'Student must have a client account. Please create client account first.'
+        ];
+    }
+    
+    // Validate payment amount
+    if (empty($student->amount_paid) || $student->amount_paid <= 0) {
+        return [
+            'success' => false,
+            'message' => 'No payment amount recorded for this student'
+        ];
+    }
+    
+    // Validate student has package/item
+    if (empty($student->item_id)) {
+        return [
+            'success' => false,
+            'message' => 'No package assigned to student. Cannot create invoice.'
+        ];
+    }
+    
+    // ============================================================
+    // STEP 1: CREATE INVOICE WITH LINE ITEMS
+    // ============================================================
+    
+    $invoice_result = $this->create_simple_invoice(
+        $student->client_id,
+        $student->amount_paid,
+        $student_id,
+        'Package Enrollment Payment'
+    );
+    
+    if (!$invoice_result['success']) {
+        return $invoice_result;
+    }
+    
+    // If invoice already exists, just return it
+    if (isset($invoice_result['existing']) && $invoice_result['existing'] === true) {
+        return $invoice_result;
+    }
+    
+    // ============================================================
+    // STEP 2: GET PAYMENT METHOD FROM LATEST PAYMENT RECORD
+    // ============================================================
+    
+    // Get the most recent payment record for this student
+    $this->db->select('payment_method, transaction_reference, payment_date, payment_notes');
+    $this->db->from($this->table_payments);
+    $this->db->where('student_id', $student_id);
+    $this->db->order_by('payment_date', 'DESC');
+    $this->db->limit(1);
+    $latest_payment = $this->db->get()->row();
+    
+    $payment_method = 'cash'; // Default
+    $transaction_ref = '';
+    $payment_date = date('Y-m-d');
+    $payment_notes = '';
+    
+    if ($latest_payment) {
+        $payment_method = $latest_payment->payment_method;
+        $transaction_ref = $latest_payment->transaction_reference ?? '';
+        $payment_date = $latest_payment->payment_date ?? date('Y-m-d');
+        $payment_notes = $latest_payment->payment_notes ?? '';
+    }
+    
+    // ============================================================
+    // STEP 3: RECORD PAYMENT (MARK INVOICE AS PAID)
+    // ============================================================
+    
+    $payment_recorded = $this->record_simple_payment(
+        $invoice_result['invoice_id'],
+        $student->amount_paid,
+        $transaction_ref,
+        $payment_method,
+        [
+            'payment_date' => $payment_date,
+            'payment_notes' => $payment_notes
+        ]
+    );
+    
+    if (!$payment_recorded) {
+        return [
+            'success' => false,
+            'message' => 'Invoice created but payment recording failed'
+        ];
+    }
+    
+    return [
+        'success' => true,
+        'message' => 'Invoice created with line items and marked as paid',
+        'invoice_id' => $invoice_result['invoice_id'],
+        'invoice_number' => $invoice_result['invoice_number'],
+        'payment_method' => ucfirst(str_replace('_', ' ', $payment_method)),
+        'existing' => false
+    ];
+}
 }

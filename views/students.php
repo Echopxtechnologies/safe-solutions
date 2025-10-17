@@ -203,7 +203,7 @@
                                         <th>Contact</th>
                                         <th>Package</th>
                                         <?php if (is_sls_manager_or_admin()): ?>
-                                            <th>Branch</th>
+                                            <th>Partner</th>
                                             <th>Manager</th>
                                         <?php endif; ?>
                                         <th>Status</th>

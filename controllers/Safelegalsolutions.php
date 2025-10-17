@@ -989,7 +989,17 @@ private function send_staff_credentials_email($email, $password, $firstname)
             $client_result = $this->safelegalsolutions_model->create_client_account_for_student($insert_id);
             
             if ($client_result['success']) {
+                 // ============================================================
+            // CREATE INVOICE AFTER CLIENT ACCOUNT CREATION
+            // ============================================================
+            $invoice_result = $this->safelegalsolutions_model->create_student_invoice($insert_id);
+            
+            if ($invoice_result['success'] && !$invoice_result['existing']) {
+                set_alert('success', 'Candidate added successfully! Client created, credentials sent to ' . $data['email'] . '. Invoice #' . $invoice_result['invoice_number'] . ' created.');
+            } else {
                 set_alert('success', 'Candidate added successfully! Client portal account created and credentials sent to ' . $data['email']);
+            }
+    
             } else {
                 set_alert('warning', 'Candidate added but client account creation failed: ' . $client_result['message']);
             }
@@ -1077,6 +1087,7 @@ private function send_staff_credentials_email($email, $password, $firstname)
         $new_payment_complete = $this->safelegalsolutions_model->is_payment_complete($id);
         
         if (!$old_payment_complete && $new_payment_complete) {
+            
             // Create enrollment
             $enrollment_id = $this->safelegalsolutions_model->create_package_enrollment($id, [
                 'created_by' => get_staff_user_id()
@@ -1091,12 +1102,25 @@ private function send_staff_credentials_email($email, $password, $firstname)
                 $client_result = $this->safelegalsolutions_model->create_client_account_for_student($id);
                 
                 if ($client_result['success']) {
-                    set_alert('success', 'Payment completed! Client portal account created and credentials sent to ' . $old_student->email);
+                    $invoice_result = $this->safelegalsolutions_model->create_student_invoice($id);
+            
+            if ($invoice_result['success'] && !$invoice_result['existing']) {
+                set_alert('success', 'Payment completed! Client created, credentials sent to ' . $old_student->email . '. Invoice #' . $invoice_result['invoice_number'] . ' created and marked as paid.');
+            } else {
+                set_alert('success', 'Payment completed! Client account created and credentials sent to ' . $old_student->email);
+            }
+        
                 } else {
                     set_alert('warning', 'Payment completed but client account creation failed: ' . $client_result['message']);
                 }
             } else {
-                set_alert('success', 'Candidate updated successfully. Payment is now complete!');
+                $invoice_result = $this->safelegalsolutions_model->create_student_invoice($id);
+                if ($invoice_result['success'] && !$invoice_result['existing']) {
+            set_alert('success', 'Candidate updated successfully. Payment complete! Invoice #' . $invoice_result['invoice_number'] . ' created.');
+        } else {
+            set_alert('success', 'Candidate updated successfully. Payment is now complete!');
+        }
+
             }
         } else {
             set_alert('success', 'Candidate updated successfully');
@@ -1118,7 +1142,13 @@ private function send_staff_credentials_email($email, $password, $firstname)
                             $client_result = $this->safelegalsolutions_model->create_client_account_for_student($id);
                             
                             if ($client_result['success']) {
-                                set_alert('success', 'Payment completed! Client portal account created and credentials sent to ' . $old_student->email);
+                               $invoice_result = $this->safelegalsolutions_model->create_student_invoice($id);
+            
+            if ($invoice_result['success'] && !$invoice_result['existing']) {
+                set_alert('success', 'Payment completed! Client created, credentials sent to ' . $old_student->email . '. Invoice #' . $invoice_result['invoice_number'] . ' created.');
+            } else {
+                set_alert('success', 'Payment completed! Client account created and credentials sent to ' . $old_student->email);
+            }
                             } else {
                                 set_alert('warning', 'Payment completed but client account creation failed: ' . $client_result['message']);
                             }
