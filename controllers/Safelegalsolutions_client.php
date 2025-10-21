@@ -837,49 +837,103 @@ class Safelegalsolutions_client extends ClientsController
     /**
      * Send login credentials email to customer
      */
-    private function _send_credentials_email($student, $password, $client_id)
-    {
-        try {
-            $this->load->model('emails_model');
-            
-            $login_url = site_url('authentication/login');
-            
-            // Email subject
-            $subject = 'Your Login Credentials - Safe Legal Solutions';
-            
-            // Email body
-            $message = '<p>DearS ' . $student->student_name . ',</p>';
-            $message .= '<p>Thank you for your payment! Your registration is now complete.</p>';
-            $message .= '<p><strong>Your Login Credentials:</strong></p>';
-            $message .= '<ul>';
-            $message .= '<li><strong>Email:</strong> ' . $student->email . '</li>';
-            $message .= '<li><strong>Password:</strong> ' . $password . '</li>';
-            $message .= '</ul>';
-            $message .= '<p><strong>Login URL:</strong> <a href="' . $login_url . '">' . $login_url . '</a></p>';
-            $message .= '<p><strong>Important:</strong> Please change your password after your first login for security.</p>';
-            $message .= '<p>Your Student ID: <strong>' . $student->unique_id . '</strong></p>';
-            $message .= '<p>Your Referral Code: <strong>' . $student->referral_code . '</strong></p>';
-            $message .= '<br>';
-            $message .= '<p>If you have any questions, please contact our support team.</p>';
-            $message .= '<p>Best regards,<br>Safe Legal Solutions Team</p>';
-            
-            // Send email
-            $sent = $this->emails_model->send_simple_email($student->email, $subject, $message);
-            
-            if ($sent) {
-                log_activity($this->log_prefix . ' - ✓ Credentials email sent [Email: ' . $student->email . ', Client ID: ' . $client_id . ']');
-            } else {
-                log_activity($this->log_prefix . ' - ✗ Failed to send credentials email [Email: ' . $student->email . ', Client ID: ' . $client_id . ']');
-            }
-            
-            return $sent;
-            
-        } catch (Exception $e) {
-            log_activity($this->log_prefix . ' - Send Email Error: ' . $e->getMessage());
-            return false;
+ private function _send_credentials_email($student, $password, $real_client_id)
+{
+    try {
+        $this->load->library('email');
+        
+        $company_name = get_option('companyname');
+        $login_url = site_url('authentication/login');
+        
+        $subject = 'Your Login Credentials - Safe Legal Solutions';
+        
+        $message = '
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+                .content { background-color: #f9f9f9; padding: 30px; border: 1px solid #ddd; border-radius: 0 0 5px 5px; }
+                .credentials { background-color: #fff; padding: 20px; border-left: 4px solid #4CAF50; margin: 20px 0; }
+                .credentials strong { color: #4CAF50; }
+                .button { display: inline-block; padding: 12px 30px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #777; font-size: 12px; }
+                .warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Welcome to Safe Legal Solutions</h1>
+                </div>
+                
+                <div class="content">
+                    <h2>Hello ' . htmlspecialchars($student->student_name) . ',</h2>
+                    
+                    <p>Congratulations! Your registration and payment have been processed successfully. We have created a client portal account for you.</p>
+                    
+                    <p>You can now access your personal dashboard to:</p>
+                    <ul>
+                        <li>View your package details and progress</li>
+                        <li>Access important documents and resources</li>
+                        <li>Track your referral earnings</li>
+                        <li>Communicate with our support team</li>
+                    </ul>
+                    
+                    <div class="credentials">
+                        <h3>Your Login Credentials:</h3>
+                        <p><strong>Portal URL:</strong> <a href="' . $login_url . '">' . $login_url . '</a></p>
+                        <p><strong>Email/Username:</strong> ' . htmlspecialchars($student->email) . '</p>
+                        <p><strong>Password:</strong> <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 3px; font-size: 14px;">' . htmlspecialchars($password) . '</code></p>
+                        <p><strong>Student ID:</strong> ' . htmlspecialchars($student->unique_id) . '</p>
+                        <p><strong>Referral Code:</strong> ' . htmlspecialchars($student->referral_code) . '</p>
+                    </div>
+                    
+                    <div class="warning">
+                        <strong>⚠️ Security Notice:</strong> Please change your password after your first login for security purposes.
+                    </div>
+                    
+                    <center>
+                        <a href="' . $login_url . '" class="button">Login to Your Portal</a>
+                    </center>
+                    
+                    <p style="margin-top: 30px;">If you have any questions or need assistance, please don\'t hesitate to contact us.</p>
+                </div>
+                
+                <div class="footer">
+                    <p>This is an automated message. Please do not reply to this email.</p>
+                    <p>&copy; ' . date('Y') . ' ' . htmlspecialchars($company_name) . '. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        ';
+        
+        $this->email->clear();
+        $this->email->from(get_option('smtp_email'), $company_name);
+        $this->email->to($student->email);
+        $this->email->subject($subject);
+        $this->email->message($message);
+        $this->email->set_mailtype('html');
+        
+        $sent = $this->email->send();
+        
+        if ($sent) {
+            log_activity($this->log_prefix . ' - ✓ Credentials email sent [Email: ' . $student->email . ', Client ID: ' . $real_client_id . ']');
+        } else {
+            log_activity($this->log_prefix . ' - ✗ Failed to send credentials email [Email: ' . $student->email . ', Client ID: ' . $real_client_id . ']');
         }
+        
+        return $sent;
+        
+    } catch (Exception $e) {
+        log_activity($this->log_prefix . ' - Send Email Error: ' . $e->getMessage());
+        return false;
     }
-    
+}
     /**
      * Create package enrollment record
      */

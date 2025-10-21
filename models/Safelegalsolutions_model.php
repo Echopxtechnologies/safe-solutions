@@ -29,6 +29,7 @@ private $table_enrollments;
         $this->table_payments = db_prefix() . 'sls_payments'; // NEW
         $this->table_enrollments = db_prefix() . 'sls_package_enrollments'; // NEW
         $this->table_countries = db_prefix() . 'sls_destination_countries';
+        $this->table_partner_docs = db_prefix() . 'sls_partner_documents';
     }
 
     // ==================== BRANCH CATEGORIES ====================
@@ -2245,4 +2246,119 @@ public function create_student_invoice($student_id)
         'existing' => false
     ];
 }
+
+// ==================== PARTNER DOCUMENTS (LONGBLOB STORAGE) ====================
+
+/**
+ * Get all documents for a branch (without binary data)
+ * @param int $branch_id Branch ID
+ * @return array
+ */
+public function get_partner_documents($branch_id)
+{
+    $this->db->select($this->table_partner_docs . '.id, ' .
+                     $this->table_partner_docs . '.branch_id, ' .
+                     $this->table_partner_docs . '.file_name, ' .
+                     $this->table_partner_docs . '.file_size, ' .
+                     $this->table_partner_docs . '.file_type, ' .
+                     $this->table_partner_docs . '.document_type, ' .
+                     $this->table_partner_docs . '.description, ' .
+                     $this->table_partner_docs . '.uploaded_by, ' .
+                     $this->table_partner_docs . '.uploaded_at, ' .
+                     $this->table_partner_docs . '.is_verified, ' .
+                     $this->table_partner_docs . '.verified_by, ' .
+                     $this->table_partner_docs . '.verified_at, ' .
+                     'uploader.firstname as uploaded_by_firstname, ' .
+                     'uploader.lastname as uploaded_by_lastname, ' .
+                     'verifier.firstname as verified_by_firstname, ' .
+                     'verifier.lastname as verified_by_lastname');
+    $this->db->from($this->table_partner_docs);
+    $this->db->join(db_prefix() . 'staff as uploader', 
+                   'uploader.staffid = ' . $this->table_partner_docs . '.uploaded_by', 
+                   'left');
+    $this->db->join(db_prefix() . 'staff as verifier', 
+                   'verifier.staffid = ' . $this->table_partner_docs . '.verified_by', 
+                   'left');
+    $this->db->where($this->table_partner_docs . '.branch_id', $branch_id);
+    $this->db->order_by($this->table_partner_docs . '.uploaded_at', 'DESC');
+    
+    return $this->db->get()->result();
+}
+
+/**
+ * Get single document WITH binary data
+ * @param int $id Document ID
+ * @return object|null
+ */
+public function get_partner_document($id)
+{
+    return $this->db->get_where($this->table_partner_docs, ['id' => $id])->row();
+}
+
+/**
+ * Add partner document with binary data
+ * @param array $data Document data (must include file_data as binary)
+ * @return int|bool Insert ID or false
+ */
+public function add_partner_document($data)
+{
+    $this->db->insert($this->table_partner_docs, $data);
+    $insert_id = $this->db->insert_id();
+    
+    if ($insert_id) {
+        log_activity('Partner Document Uploaded [ID: ' . $insert_id . ', Branch ID: ' . $data['branch_id'] . ', File: ' . $data['file_name'] . ']');
+        return $insert_id;
+    }
+    
+    return false;
+}
+
+/**
+ * Delete partner document
+ * @param int $id Document ID
+ * @return bool
+ */
+public function delete_partner_document($id)
+{
+    $doc = $this->get_partner_document($id);
+    
+    if (!$doc) {
+        return false;
+    }
+    
+    // Delete from database (no file on disk to delete)
+    $this->db->where('id', $id);
+    $this->db->delete($this->table_partner_docs);
+    
+    if ($this->db->affected_rows() > 0) {
+        log_activity('Partner Document Deleted [ID: ' . $id . ', File: ' . $doc->file_name . ']');
+        return true;
+    }
+    
+    return false;
+}
+
+/**
+ * Verify document
+ * @param int $id Document ID
+ * @param int $staff_id Verifier staff ID
+ * @return bool
+ */
+public function verify_partner_document($id, $staff_id)
+{
+    $this->db->where('id', $id);
+    $this->db->update($this->table_partner_docs, [
+        'is_verified' => 1,
+        'verified_by' => $staff_id,
+        'verified_at' => date('Y-m-d H:i:s')
+    ]);
+    
+    if ($this->db->affected_rows() > 0) {
+        log_activity('Partner Document Verified [ID: ' . $id . ']');
+        return true;
+    }
+    
+    return false;
+}
+
 }

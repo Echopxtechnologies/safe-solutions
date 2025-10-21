@@ -12,6 +12,28 @@
                         </h4>
                         <hr class="hr-panel-heading" />
 
+                        <!-- NAVIGATION TABS (Only show for editing existing branch) -->
+                        <?php if (isset($branch)): ?>
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li role="presentation" class="active">
+                                <a href="#tab_basic_info" aria-controls="tab_basic_info" role="tab" data-toggle="tab">
+                                    <i class="fa fa-info-circle"></i> Basic Information
+                                </a>
+                            </li>
+                            <li role="presentation">
+                                <a href="#tab_documents" aria-controls="tab_documents" role="tab" data-toggle="tab">
+                                    <i class="fa fa-file-text"></i> Documents 
+                                    <span class="badge" id="documents_count">0</span>
+                                </a>
+                            </li>
+                        </ul>
+
+                        <!-- TAB CONTENT -->
+                        <div class="tab-content mtop20">
+                            <!-- TAB 1: BASIC INFO (all the existing form fields) -->
+                            <div role="tabpanel" class="tab-pane active" id="tab_basic_info">
+                        <?php endif; ?>
+
                         <?php echo form_open(admin_url('safelegalsolutions/branch/' . (isset($branch) ? $branch->id : ''))); ?>
                         
                         <!-- STEP 1: BRANCH BASIC INFO -->
@@ -583,6 +605,123 @@
 
                         <?php echo form_close(); ?>
 
+                        <?php if (isset($branch)): ?>
+                            </div>
+                            <!-- END TAB 1: BASIC INFO -->
+
+                            <!-- TAB 2: DOCUMENTS -->
+                            <div role="tabpanel" class="tab-pane" id="tab_documents">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="alert alert-info">
+                                            <i class="fa fa-info-circle"></i> Upload partner documents such as GST Certificate, PAN Card, Business License, Partnership Agreement, etc.
+                                            <br><strong>Allowed formats:</strong> PDF, DOC, DOCX, JPG, PNG, XLS, XLSX (Max 10MB per file)
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- UPLOAD FORM -->
+                                <div class="panel panel-primary">
+                                    <div class="panel-heading">
+                                        <h4 class="panel-title">
+                                            <i class="fa fa-upload"></i> Upload New Document
+                                        </h4>
+                                    </div>
+                                    <div class="panel-body">
+                                        <form id="uploadDocumentForm" enctype="multipart/form-data">
+                                            <input type="hidden" name="branch_id" id="doc_branch_id" value="<?php echo $branch->id; ?>">
+                                            
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="document_type" class="control-label">
+                                                            <span class="text-danger">*</span> Document Type
+                                                        </label>
+                                                        <select name="document_type" id="document_type" class="form-control selectpicker" required>
+                                                            <option value="">Select Type</option>
+                                                            <option value="GST Certificate">GST Certificate</option>
+                                                            <option value="PAN Card">PAN Card</option>
+                                                            <option value="Business License">Business License</option>
+                                                            <option value="Partnership Agreement">Partnership Agreement</option>
+                                                            <option value="Bank Details">Bank Details</option>
+                                                            <option value="ID Proof">ID Proof</option>
+                                                            <option value="Address Proof">Address Proof</option>
+                                                            <option value="Other">Other</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-8">
+                                                    <div class="form-group">
+                                                        <label for="description" class="control-label">
+                                                            Description/Notes
+                                                        </label>
+                                                        <input type="text" name="description" id="description" class="form-control" 
+                                                               placeholder="Brief description of the document">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <div class="form-group">
+                                                        <label for="document" class="control-label">
+                                                            <span class="text-danger">*</span> Select File
+                                                        </label>
+                                                        <input type="file" name="document" id="document" class="form-control" 
+                                                               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx" required>
+                                                        <small class="text-muted">Max file size: 10MB</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <button type="button" class="btn btn-success" id="uploadDocBtn">
+                                                    <i class="fa fa-upload"></i> Upload Document
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <!-- DOCUMENTS LIST -->
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <h4 class="panel-title">
+                                            <i class="fa fa-files-o"></i> Uploaded Documents
+                                        </h4>
+                                    </div>
+                                    <div class="panel-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-bordered" id="documentsTable">
+                                                <thead>
+                                                    <tr>
+                                                        <th width="5%">#</th>
+                                                        <th width="20%">Document Type</th>
+                                                        <th width="25%">File Name</th>
+                                                        <th width="15%">Size</th>
+                                                        <th width="15%">Uploaded By</th>
+                                                        <th width="10%">Status</th>
+                                                        <th width="10%" class="text-center">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="documentsTableBody">
+                                                    <tr>
+                                                        <td colspan="7" class="text-center text-muted">
+                                                            <i class="fa fa-spinner fa-spin"></i> Loading documents...
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- END TAB 2: DOCUMENTS -->
+                        </div>
+                        <!-- END TAB CONTENT -->
+                        <?php endif; ?>
+
                     </div>
                 </div>
             </div>
@@ -661,7 +800,7 @@
         // ============================================================
         // FORM VALIDATION BEFORE SUBMIT
         // ============================================================
-        $('form').on('submit', function(e) {
+        $('form[action*="safelegalsolutions/branch"]').on('submit', function(e) {
             var createNewStaff = $('#create_new_staff').is(':checked');
             
             // Validate consent checkboxes (required)
@@ -766,6 +905,198 @@
             $('#new_category_name').val('');
             $('#category_error').addClass('hide');
         });
+        
+        // ============================================================
+        // DOCUMENTS TAB FUNCTIONALITY
+        // ============================================================
+        <?php if (isset($branch)): ?>
+        var branchId = <?php echo $branch->id; ?>;
+
+        // Load documents when tab is clicked
+        $('a[href="#tab_documents"]').on('shown.bs.tab', function() {
+            loadDocuments();
+        });
+
+        // Load documents on page load if editing
+        if ($('#tab_documents').length) {
+            loadDocuments();
+        }
+
+        // Upload document
+        $('#uploadDocBtn').on('click', function() {
+            var btn = $(this);
+            var form = $('#uploadDocumentForm')[0];
+            var formData = new FormData(form);
+            
+            // Validation
+            if (!$('#document_type').val()) {
+                alert('Please select document type');
+                return;
+            }
+            
+            if (!$('#document')[0].files[0]) {
+                alert('Please select a file');
+                return;
+            }
+            
+            // Check file size (10MB = 10485760 bytes)
+            if ($('#document')[0].files[0].size > 10485760) {
+                alert('File size exceeds 10MB limit');
+                return;
+            }
+            
+            btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Uploading...');
+            
+            $.ajax({
+                url: admin_url + 'safelegalsolutions/upload_partner_document',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        alert_float('success', response.message);
+                        
+                        // Reset form
+                        $('#uploadDocumentForm')[0].reset();
+                        $('#document_type').selectpicker('refresh');
+                        
+                        // Reload documents
+                        loadDocuments();
+                    } else {
+                        alert_float('danger', response.message);
+                    }
+                },
+                error: function() {
+                    alert_float('danger', 'An error occurred while uploading');
+                },
+                complete: function() {
+                    btn.prop('disabled', false).html('<i class="fa fa-upload"></i> Upload Document');
+                }
+            });
+        });
+
+        // Load documents function
+        function loadDocuments() {
+            $.ajax({
+                url: admin_url + 'safelegalsolutions/get_partner_documents_ajax/' + branchId,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success && response.documents) {
+                        var tbody = $('#documentsTableBody');
+                        tbody.empty();
+                        
+                        if (response.documents.length === 0) {
+                            tbody.append('<tr><td colspan="7" class="text-center text-muted">No documents uploaded yet</td></tr>');
+                            $('#documents_count').text('0');
+                        } else {
+                            $('#documents_count').text(response.documents.length);
+                            
+                            $.each(response.documents, function(index, doc) {
+                                var verifiedBadge = doc.is_verified == 1 
+                                    ? '<span class="label label-success"><i class="fa fa-check"></i> Verified</span>'
+                                    : '<span class="label label-warning"><i class="fa fa-clock-o"></i> Pending</span>';
+                                
+                                var fileSize = formatBytes(doc.file_size);
+                                var uploadedBy = doc.uploaded_by_firstname + ' ' + doc.uploaded_by_lastname;
+                                
+                                var row = '<tr>' +
+                                    '<td>' + (index + 1) + '</td>' +
+                                    '<td>' + doc.document_type + '</td>' +
+                                    '<td>' +
+                                        '<i class="fa fa-file-o"></i> ' + doc.file_name +
+                                        (doc.description ? '<br><small class="text-muted">' + doc.description + '</small>' : '') +
+                                    '</td>' +
+                                    '<td>' + fileSize + '</td>' +
+                                    '<td>' + uploadedBy + '<br><small class="text-muted">' + doc.uploaded_at + '</small></td>' +
+                                    '<td>' + verifiedBadge + '</td>' +
+                                    '<td class="text-center">' +
+                                        '<a href="' + admin_url + 'safelegalsolutions/download_partner_document/' + doc.id + '" ' +
+                                           'class="btn btn-xs btn-info" title="Download">' +
+                                            '<i class="fa fa-download"></i>' +
+                                        '</a> ';
+                                
+                                // Verify button (only if not verified)
+                                if (doc.is_verified == 0) {
+                                    row += '<button type="button" class="btn btn-xs btn-success verify-doc" ' +
+                                              'data-id="' + doc.id + '" title="Mark as Verified">' +
+                                              '<i class="fa fa-check"></i>' +
+                                           '</button> ';
+                                }
+                                
+                                // Delete button
+                                row += '<button type="button" class="btn btn-xs btn-danger delete-doc" ' +
+                                          'data-id="' + doc.id + '" title="Delete">' +
+                                          '<i class="fa fa-trash"></i>' +
+                                       '</button>' +
+                                    '</td>' +
+                                '</tr>';
+                                
+                                tbody.append(row);
+                            });
+                        }
+                    }
+                },
+                error: function() {
+                    $('#documentsTableBody').html('<tr><td colspan="7" class="text-center text-danger">Error loading documents</td></tr>');
+                }
+            });
+        }
+
+        // Verify document
+        $(document).on('click', '.verify-doc', function() {
+            var docId = $(this).data('id');
+            
+            if (confirm('Mark this document as verified?')) {
+                $.ajax({
+                    url: admin_url + 'safelegalsolutions/verify_partner_document/' + docId,
+                    type: 'POST',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            alert_float('success', response.message);
+                            loadDocuments();
+                        } else {
+                            alert_float('danger', response.message);
+                        }
+                    }
+                });
+            }
+        });
+
+        // Delete document
+        $(document).on('click', '.delete-doc', function() {
+            var docId = $(this).data('id');
+            
+            if (confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+                $.ajax({
+                    url: admin_url + 'safelegalsolutions/delete_partner_document/' + docId,
+                    type: 'POST',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            alert_float('success', response.message);
+                            loadDocuments();
+                        } else {
+                            alert_float('danger', response.message);
+                        }
+                    }
+                });
+            }
+        });
+
+        // Format bytes helper
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+        <?php endif; ?>
     });
     
 })(jQuery);
@@ -802,5 +1133,31 @@
 
 .text-primary {
     color: #2563eb !important;
+}
+
+/* Tab content styling */
+.tab-content {
+    border: 1px solid #ddd;
+    border-top: none;
+    padding: 20px;
+    background-color: #fff;
+}
+
+.nav-tabs > li > a {
+    color: #555;
+}
+
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus {
+    font-weight: bold;
+}
+
+#documents_count {
+    background-color: #dc3545;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 11px;
 }
 </style>

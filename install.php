@@ -181,6 +181,44 @@ try {
     die('Failed to create table: ' . $table2 . ' - Error: ' . $e->getMessage());
 }
 
+// ==================== TABLE 2.5: PARTNER DOCUMENTS (LONGBLOB STORAGE) ====================
+$table_partner_docs = $db_prefix . 'sls_partner_documents';
+log_message('info', 'Creating table: ' . $table_partner_docs);
+
+try {
+    $CI->db->query("DROP TABLE IF EXISTS `{$table_partner_docs}`");
+    
+    $sql_partner_docs = "CREATE TABLE `{$table_partner_docs}` (
+        `id` INT(11) NOT NULL AUTO_INCREMENT,
+        `branch_id` INT(11) NOT NULL COMMENT 'FK to sls_branches',
+        `file_name` VARCHAR(255) NOT NULL COMMENT 'Original file name',
+        `file_data` LONGBLOB NOT NULL COMMENT 'Binary file data',
+        `file_size` INT(11) NOT NULL DEFAULT 0 COMMENT 'File size in bytes',
+        `file_type` VARCHAR(50) NULL COMMENT 'MIME type',
+        `document_type` VARCHAR(100) NULL COMMENT 'Category: GST, PAN, Agreement, etc.',
+        `description` TEXT NULL COMMENT 'Document description/notes',
+        `uploaded_by` INT(11) NOT NULL COMMENT 'Staff who uploaded',
+        `uploaded_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        `is_verified` TINYINT(1) DEFAULT 0 COMMENT 'Admin verification status',
+        `verified_by` INT(11) NULL,
+        `verified_at` DATETIME NULL,
+        PRIMARY KEY (`id`),
+        KEY `branch_id` (`branch_id`),
+        KEY `uploaded_by` (`uploaded_by`),
+        KEY `is_verified` (`is_verified`),
+        CONSTRAINT `fk_partner_docs_branch` 
+            FOREIGN KEY (`branch_id`) 
+            REFERENCES `{$table2}` (`id`) 
+            ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    
+    $CI->db->query($sql_partner_docs);
+    log_message('info', 'SUCCESS: Table ' . $table_partner_docs . ' created with LONGBLOB storage');
+} catch (Exception $e) {
+    log_message('error', 'ERROR creating ' . $table_partner_docs . ': ' . $e->getMessage());
+    die('Failed to create table: ' . $table_partner_docs . ' - Error: ' . $e->getMessage());
+}
+
 // ==================== TABLE 3: ITEMS/PACKAGES (CREATE BEFORE STUDENTS) ====================
 $table5 = $db_prefix . 'sls_items';
 log_message('info', 'Creating table: ' . $table5);
@@ -541,6 +579,7 @@ $tables_to_check = [
     $table1 => 'Branch Categories',
     $table_countries => 'Destination Countries',
     $table2 => 'Branches (with registration_token & is_default)',
+    $table_partner_docs => 'Partner Documents',
     $table5 => 'Items/Packages',
     $table3 => 'Students (cleaned - payment tracking via sls_payments)',
     $table4 => 'Change Requests',

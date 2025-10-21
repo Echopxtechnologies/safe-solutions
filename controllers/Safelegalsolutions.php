@@ -1828,4 +1828,164 @@ public function delete_change_request($request_id)
     redirect(admin_url('safelegalsolutions/change_requests'));
 }
 
+
+// documents
+/**
+ * Upload partner document (AJAX) - Store as LONGBLOB
+ */
+public function upload_partner_document()
+{
+    // NO CSRF check needed - Perfex handles it automatically
+    
+    if (!is_sls_manager_or_admin()) {
+        echo json_encode(['success' => false, 'message' => 'Access denied']);
+        return;
+    }
+    
+    $branch_id = $this->input->post('branch_id');
+    $document_type = $this->input->post('document_type');
+    $description = $this->input->post('description');
+    
+    if (empty($branch_id)) {
+        echo json_encode(['success' => false, 'message' => 'Branch ID is required']);
+        return;
+    }
+    
+    // Check if file uploaded
+    if (empty($_FILES['document']['name'])) {
+        echo json_encode(['success' => false, 'message' => 'Please select a file']);
+        return;
+    }
+    
+    // Validate file
+    $allowed_types = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'xls', 'xlsx'];
+    $file_ext = pathinfo($_FILES['document']['name'], PATHINFO_EXTENSION);
+    
+    if (!in_array(strtolower($file_ext), $allowed_types)) {
+        echo json_encode(['success' => false, 'message' => 'File type not allowed. Allowed: PDF, DOC, DOCX, JPG, PNG, XLS, XLSX']);
+        return;
+    }
+    
+    // Max file size: 10MB
+    if ($_FILES['document']['size'] > 10485760) {
+        echo json_encode(['success' => false, 'message' => 'File size exceeds 10MB limit']);
+        return;
+    }
+    
+    // Read file as binary
+    $file_data = file_get_contents($_FILES['document']['tmp_name']);
+    
+    if ($file_data === false) {
+        echo json_encode(['success' => false, 'message' => 'Failed to read file']);
+        return;
+    }
+    
+    // Save to database as LONGBLOB
+    $doc_data = [
+        'branch_id' => $branch_id,
+        'file_name' => $_FILES['document']['name'],
+        'file_data' => $file_data, // Binary data
+        'file_size' => $_FILES['document']['size'],
+        'file_type' => $_FILES['document']['type'],
+        'document_type' => $document_type,
+        'description' => $description,
+        'uploaded_by' => get_staff_user_id(),
+        'uploaded_at' => date('Y-m-d H:i:s')
+    ];
+    
+    $insert_id = $this->safelegalsolutions_model->add_partner_document($doc_data);
+    
+    if ($insert_id) {
+        echo json_encode([
+            'success' => true,
+            'message' => 'Document uploaded successfully',
+            'document_id' => $insert_id
+        ]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to save document']);
+    }
+}
+
+/**
+ * Get partner documents (AJAX)
+ */
+public function get_partner_documents_ajax($branch_id)
+{
+    if (!is_sls_manager_or_admin()) {
+        echo json_encode(['success' => false, 'message' => 'Access denied']);
+        return;
+    }
+    
+    $documents = $this->safelegalsolutions_model->get_partner_documents($branch_id);
+    
+    echo json_encode([
+        'success' => true,
+        'documents' => $documents
+    ]);
+}
+
+/**
+ * Download partner document (stream binary data)
+ */
+public function download_partner_document($id)
+{
+    if (!is_sls_manager_or_admin()) {
+        access_denied('safelegalsolutions');
+    }
+    
+    $doc = $this->safelegalsolutions_model->get_partner_document($id);
+    
+    if (!$doc) {
+        show_404();
+    }
+    
+    // Set headers for file download
+    header('Content-Type: ' . $doc->file_type);
+    header('Content-Disposition: attachment; filename="' . $doc->file_name . '"');
+    header('Content-Length: ' . $doc->file_size);
+    header('Cache-Control: private, max-age=0, must-revalidate');
+    header('Pragma: public');
+    
+    // Output binary data
+    echo $doc->file_data;
+    exit;
+}
+
+/**
+ * Delete partner document (AJAX)
+ */
+public function delete_partner_document($id)
+{
+    if (!is_sls_manager_or_admin()) {
+        echo json_encode(['success' => false, 'message' => 'Access denied']);
+        return;
+    }
+    
+    $success = $this->safelegalsolutions_model->delete_partner_document($id);
+    
+    if ($success) {
+        echo json_encode(['success' => true, 'message' => 'Document deleted successfully']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to delete document']);
+    }
+}
+
+/**
+ * Verify partner document (AJAX)
+ */
+public function verify_partner_document($id)
+{
+    if (!is_sls_manager_or_admin()) {
+        echo json_encode(['success' => false, 'message' => 'Access denied']);
+        return;
+    }
+    
+    $success = $this->safelegalsolutions_model->verify_partner_document($id, get_staff_user_id());
+    
+    if ($success) {
+        echo json_encode(['success' => true, 'message' => 'Document verified successfully']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to verify document']);
+    }
+}
 }
