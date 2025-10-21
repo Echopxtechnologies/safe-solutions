@@ -258,6 +258,7 @@ function safelegalsolutions_add_client_navigation()
         border-radius: 4px;
         padding: 6px 14px;              /* ✅ Reduced from 7px 15px */
         margin-right: 8px;
+        margin-top:25px;
         font-weight: 500;
         transition: all 0.25s ease;
         display: inline-flex;           /* ✅ Better alignment */

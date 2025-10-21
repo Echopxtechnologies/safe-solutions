@@ -165,7 +165,7 @@
                 <div class="panel panel-info">
                     <div class="panel-heading">
                         <h4 class="panel-title">
-                            <i class="fa fa-building"></i> Branch Details
+                            <i class="fa fa-building"></i> Assigned To 
                         </h4>
                     </div>
                     <div class="panel-body">
@@ -173,7 +173,7 @@
                             <tbody>
                                 <tr>
                                     <td style="width: 45%; font-weight: bold; background: #f8f9fa;">
-                                        <i class="fa fa-building"></i> Branch Name
+                                        <i class="fa fa-building"></i> Assignee Name
                                     </td>
                                     <td>
                                         <strong><?php echo htmlspecialchars($branch->branch_name); ?></strong>
