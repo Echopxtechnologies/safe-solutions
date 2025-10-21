@@ -848,7 +848,7 @@ class Safelegalsolutions_client extends ClientsController
             $subject = 'Your Login Credentials - Safe Legal Solutions';
             
             // Email body
-            $message = '<p>Dear ' . $student->student_name . ',</p>';
+            $message = '<p>DearS ' . $student->student_name . ',</p>';
             $message .= '<p>Thank you for your payment! Your registration is now complete.</p>';
             $message .= '<p><strong>Your Login Credentials:</strong></p>';
             $message .= '<ul>';

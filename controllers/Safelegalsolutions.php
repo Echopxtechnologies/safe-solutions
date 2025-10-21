@@ -463,9 +463,36 @@ public function branch($id = '')
             'category_id',
             'branch_name',
             'branch_code',
+            
+            // Contact
+            'contact_phone',
+            'alternative_phone',
+            'website_url',
+            
+            // Address
             'location',
             'address',
-            'contact_phone',
+            'address_line2',
+            'state',
+            'pin_code',
+            
+            // Business
+            'years_in_business',
+            'avg_students_per_year',
+            'gst_number',
+            
+            // Partnership
+            'services_offered',
+            'expected_monthly_referrals',
+            'preferred_communication',
+            'additional_comments',
+            
+            // Consent
+            'terms_accepted',
+            'data_consent',
+            'marketing_consent',
+            
+            // Status
             'nodal_partner_manager_id',
             'is_active',
             'is_default'
@@ -476,7 +503,25 @@ public function branch($id = '')
                 $branch_data[$field] = $post_data[$field];
             }
         }
-        
+        // Handle primary_destinations (multi-select → JSON)
+if (isset($post_data['primary_destinations']) && is_array($post_data['primary_destinations'])) {
+    $branch_data['primary_destinations'] = json_encode(array_map('intval', $post_data['primary_destinations']));
+} else {
+    $branch_data['primary_destinations'] = json_encode([]);
+}
+
+// Handle consent metadata
+if (!empty($branch_data['terms_accepted']) || !empty($branch_data['data_consent'])) {
+    if ($id == '') { // Only on new creation
+        $branch_data['consent_date'] = date('Y-m-d H:i:s');
+        $branch_data['consent_ip'] = $this->input->ip_address();
+    }
+}
+
+// Ensure consent checkboxes are stored as 0 or 1
+$branch_data['terms_accepted'] = isset($post_data['terms_accepted']) ? 1 : 0;
+$branch_data['data_consent'] = isset($post_data['data_consent']) ? 1 : 0;
+$branch_data['marketing_consent'] = isset($post_data['marketing_consent']) ? 1 : 0;
         // Validate required fields
         if (empty($branch_data['category_id'])) {
             set_alert('danger', 'Category is required');

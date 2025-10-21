@@ -120,28 +120,59 @@ try {
     $CI->db->query("DROP TABLE IF EXISTS `{$table2}`");
     
     $sql2 = "CREATE TABLE `{$table2}` (
-        `id` INT(11) NOT NULL AUTO_INCREMENT,
-        `category_id` INT(11) NOT NULL,
-        `branch_name` VARCHAR(255) NOT NULL,
-        `branch_code` VARCHAR(50) NULL,
-        `location` VARCHAR(255) NULL,
-        `address` TEXT NULL,
-        `contact_phone` VARCHAR(20) NULL,
-        `nodal_partner_manager_id` INT(11) NULL,
-        `registration_token` VARCHAR(64) NULL COMMENT 'Token for public student registration',
-        `is_default` TINYINT(1) DEFAULT 0 COMMENT 'Default branch for admin registrations',
-        `is_active` TINYINT(1) DEFAULT 1,
-        `created_by` INT(11) NOT NULL DEFAULT 1,
-        `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-        `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        PRIMARY KEY (`id`),
-        UNIQUE KEY `branch_code` (`branch_code`),
-        UNIQUE KEY `registration_token` (`registration_token`),
-        KEY `category_id` (`category_id`),
-        KEY `nodal_partner_manager_id` (`nodal_partner_manager_id`),
-        KEY `is_active` (`is_active`),
-        KEY `is_default` (`is_default`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `category_id` INT(11) NOT NULL,
+    `branch_name` VARCHAR(255) NOT NULL,
+    `branch_code` VARCHAR(50) NULL,
+    `location` VARCHAR(255) NULL COMMENT 'City',
+    
+    -- Contact Information
+    `contact_phone` VARCHAR(20) NULL,
+    `alternative_phone` VARCHAR(20) NULL COMMENT 'Alternative contact number',
+    `website_url` VARCHAR(255) NULL COMMENT 'Business website',
+    
+    -- Business Address
+    `address` TEXT NULL COMMENT 'Address Line 1',
+    `address_line2` VARCHAR(255) NULL COMMENT 'Address Line 2',
+    `state` VARCHAR(100) NULL COMMENT 'State',
+    `pin_code` VARCHAR(10) NULL COMMENT 'PIN Code',
+    
+    -- Business Details
+    `years_in_business` ENUM('less_than_1','1_to_2','3_to_5','6_to_10','more_than_10') NULL COMMENT 'Years of experience',
+    `avg_students_per_year` ENUM('1_to_25','26_to_50','51_to_100','101_to_250','250_plus') NULL COMMENT 'Annual student volume',
+    `gst_number` VARCHAR(20) NULL COMMENT 'GST registration number',
+    
+    -- Partnership Details
+    `primary_destinations` TEXT NULL COMMENT 'JSON array of country IDs',
+    `services_offered` TEXT NULL COMMENT 'Services description',
+    `expected_monthly_referrals` ENUM('1_to_5','6_to_10','11_to_20','21_to_50','50_plus') NULL,
+    `preferred_communication` ENUM('email','phone','whatsapp','video_call') DEFAULT 'email',
+    `additional_comments` TEXT NULL,
+    
+    -- Consent & Terms
+    `terms_accepted` TINYINT(1) DEFAULT 0 COMMENT 'Terms and conditions',
+    `data_consent` TINYINT(1) DEFAULT 0 COMMENT 'Data processing consent',
+    `marketing_consent` TINYINT(1) DEFAULT 0 COMMENT 'Marketing communications',
+    `consent_date` DATETIME NULL COMMENT 'When consent was given',
+    `consent_ip` VARCHAR(45) NULL COMMENT 'IP address of consent',
+    
+    `nodal_partner_manager_id` INT(11) NULL,
+    `registration_token` VARCHAR(64) NULL COMMENT 'Token for public student registration',
+    `is_default` TINYINT(1) DEFAULT 0 COMMENT 'Default branch for admin registrations',
+    `is_active` TINYINT(1) DEFAULT 1,
+    `created_by` INT(11) NOT NULL DEFAULT 1,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `branch_code` (`branch_code`),
+    UNIQUE KEY `registration_token` (`registration_token`),
+    KEY `category_id` (`category_id`),
+    KEY `nodal_partner_manager_id` (`nodal_partner_manager_id`),
+    KEY `is_active` (`is_active`),
+    KEY `is_default` (`is_default`),
+    KEY `idx_state` (`state`),
+    KEY `idx_pin_code` (`pin_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
     
     $CI->db->query($sql2);
     log_message('info', 'SUCCESS: Table ' . $table2 . ' created with is_default column');
