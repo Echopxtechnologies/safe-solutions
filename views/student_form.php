@@ -121,9 +121,9 @@
                                     </div>
                                 </div>
 
-                                <!-- PASSPORT NUMBER ROW - FIXED PLACEMENT -->
+                                <!-- PASSPORT NUMBER & EXPIRY ROW -->
                                 <div class="row">
-                                    <div class="col-md-12">
+                                    <div class="col-md-6">
                                         <div class="form-group">
                                             <label for="passport_number" class="control-label">
                                                 <span class="text-danger">*</span> Passport Number
@@ -132,9 +132,23 @@
                                                    class="form-control" required
                                                    placeholder="Enter passport number"
                                                    pattern="[A-Z0-9]+"
+                                                   minlength="6"
                                                    style="text-transform: uppercase;"
                                                    value="<?php echo isset($student) ? htmlspecialchars($student->passport_number) : ''; ?>">
                                             <small class="text-muted">Valid passport number (letters and numbers only, minimum 6 characters)</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="passport_expiry_date" class="control-label">
+                                                <span class="text-danger">*</span> Passport Expiry Date
+                                            </label>
+                                            <input type="date" name="passport_expiry_date" id="passport_expiry_date" 
+                                                   class="form-control" required
+                                                   min="<?php echo date('Y-m-d'); ?>"
+                                                   value="<?php echo isset($student) ? $student->passport_expiry_date : ''; ?>">
+                                            <small class="text-muted">Passport must be valid</small>
                                         </div>
                                     </div>
                                 </div>
@@ -200,10 +214,134 @@
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label for="address" class="control-label">
-                                                <span class="text-danger">*</span> Complete Address
+                                                <span class="text-danger">*</span> Street Address
                                             </label>
-                                            <textarea name="address" id="address" class="form-control" rows="3" required
-                                                      placeholder="Enter complete residential address"><?php echo isset($student) ? htmlspecialchars($student->address) : ''; ?></textarea>
+                                            <textarea name="address" id="address" class="form-control" rows="2" required
+                                                      placeholder="House/Flat No., Street, Area"><?php echo isset($student) ? htmlspecialchars($student->address) : ''; ?></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="city" class="control-label">
+                                                <span class="text-danger">*</span> City
+                                            </label>
+                                            <input type="text" name="city" id="city" 
+                                                   class="form-control" required
+                                                   placeholder="Enter city"
+                                                   value="<?php echo isset($student) ? htmlspecialchars($student->city) : ''; ?>">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="state" class="control-label">
+                                                <span class="text-danger">*</span> State/Province
+                                            </label>
+                                            <input type="text" name="state" id="state" 
+                                                   class="form-control" required
+                                                   placeholder="Enter state"
+                                                   value="<?php echo isset($student) ? htmlspecialchars($student->state) : ''; ?>">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="pin_code" class="control-label">
+                                                <span class="text-danger">*</span> PIN Code
+                                            </label>
+                                            <input type="text" name="pin_code" id="pin_code" 
+                                                   class="form-control" required
+                                                   placeholder="000000"
+                                                   pattern="[0-9]{5,10}"
+                                                   value="<?php echo isset($student) ? htmlspecialchars($student->pin_code) : ''; ?>">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label for="emergency_contact_mobile" class="control-label">
+                                                <span class="text-danger">*</span> Emergency Contact Mobile
+                                            </label>
+                                            <input type="text" name="emergency_contact_mobile" id="emergency_contact_mobile" 
+                                                   class="form-control" required
+                                                   placeholder="+91 9876543210"
+                                                   pattern="[0-9+\-\s()]+"
+                                                   value="<?php echo isset($student) ? htmlspecialchars($student->emergency_contact_mobile) : ''; ?>">
+                                            <small class="text-muted">Emergency contact number (can be different from student's phone)</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Destination & Program Details -->
+                        <div class="panel panel-success">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">
+                                    <i class="fa fa-globe"></i> Destination & Program Details
+                                </h4>
+                            </div>
+                            <div class="panel-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="destination_country_id" class="control-label">
+                                                <span class="text-danger">*</span> Destination Country
+                                            </label>
+                                            <select name="destination_country_id" id="destination_country_id" 
+                                                    class="form-control selectpicker" 
+                                                    data-live-search="true" data-width="100%" required>
+                                                <option value="">-- Select Country --</option>
+                                                <?php 
+                                                $countries = $this->safelegalsolutions_model->get_all_countries(['is_active' => 1]);
+                                                if (!empty($countries)): 
+                                                    foreach ($countries as $country): 
+                                                ?>
+                                                    <option value="<?php echo $country->id; ?>"
+                                                            <?php echo (isset($student) && $student->destination_country_id == $country->id) ? 'selected' : ''; ?>>
+                                                        <?php echo htmlspecialchars($country->country_name); ?>
+                                                        <?php if ($country->is_popular): ?>
+                                                            ✨
+                                                        <?php endif; ?>
+                                                    </option>
+                                                <?php 
+                                                    endforeach;
+                                                endif; 
+                                                ?>
+                                            </select>
+                                            <small class="text-muted">Select country where student plans to study</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="university_name" class="control-label">
+                                                <span class="text-danger">*</span> University/Institution Name
+                                            </label>
+                                            <input type="text" name="university_name" id="university_name" 
+                                                   class="form-control" required
+                                                   placeholder="Enter university/institution name"
+                                                   value="<?php echo isset($student) ? htmlspecialchars($student->university_name) : ''; ?>">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label for="course_program" class="control-label">
+                                                <span class="text-danger">*</span> Course/Program
+                                            </label>
+                                            <input type="text" name="course_program" id="course_program" 
+                                                   class="form-control" required
+                                                   placeholder="E.g., MBA, Bachelor of Computer Science, etc."
+                                                   value="<?php echo isset($student) ? htmlspecialchars($student->course_program) : ''; ?>">
+                                            <small class="text-muted">Enter the course/program the student is enrolling in</small>
                                         </div>
                                     </div>
                                 </div>
@@ -390,6 +528,27 @@
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Data Consent -->
+                        <div class="panel panel-danger">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">
+                                    <i class="fa fa-shield"></i> Data Processing Consent
+                                </h4>
+                            </div>
+                            <div class="panel-body">
+                                <div class="checkbox">
+                                    <label style="font-size: 14px; font-weight: normal;">
+                                        <input type="checkbox" name="consent_given" id="consent_given" value="1" required
+                                               <?php echo (isset($student) && $student->consent_given == 1) ? 'checked' : ''; ?>>
+                                        <strong>I consent</strong> to SAFE Legal Solutions collecting and processing my personal data for providing legal protection services. I understand that I will need to complete a detailed registration form for full service activation.
+                                    </label>
+                                </div>
+                                <small class="text-muted" style="display: block; margin-top: 10px;">
+                                    <i class="fa fa-info-circle"></i> Your data will be processed in accordance with applicable data protection laws. You can withdraw consent at any time.
+                                </small>
                             </div>
                         </div>
 
@@ -599,8 +758,16 @@ function calculateCompletion() {
         'email',
         'phone',
         'address',
+        'city',
+        'state',
+        'pin_code',
         'date_of_birth',
         'passport_number',
+        'passport_expiry_date',
+        'emergency_contact_mobile',
+        'destination_country_id',
+        'university_name',
+        'course_program',
         'item_id'
     ];
     
@@ -729,6 +896,74 @@ $('#candidate-form').on('submit', function(e) {
     if (age < 18) {
         alert('Candidate must be at least 18 years old');
         $('#date_of_birth').focus();
+        return false;
+    }
+    
+    // Validate passport expiry date
+    var expiryDate = new Date($('#passport_expiry_date').val());
+    if (expiryDate <= today) {
+        alert('Passport expiry date must be in the future');
+        $('#passport_expiry_date').focus();
+        return false;
+    }
+    
+    // Validate destination country
+    if (!$('#destination_country_id').val()) {
+        alert('Please select destination country');
+        $('#destination_country_id').focus();
+        $('.selectpicker').selectpicker('toggle');
+        return false;
+    }
+    
+    // Validate university name
+    if (!$('#university_name').val().trim()) {
+        alert('Please enter university/institution name');
+        $('#university_name').focus();
+        return false;
+    }
+    
+    // Validate course/program
+    if (!$('#course_program').val().trim()) {
+        alert('Please enter course/program');
+        $('#course_program').focus();
+        return false;
+    }
+    
+    // Validate city
+    if (!$('#city').val().trim()) {
+        alert('Please enter city');
+        $('#city').focus();
+        return false;
+    }
+    
+    // Validate state
+    if (!$('#state').val().trim()) {
+        alert('Please enter state');
+        $('#state').focus();
+        return false;
+    }
+    
+    // Validate PIN code
+    var pin = $('#pin_code').val();
+    if (!pin || pin.trim() === '' || pin.length < 5) {
+        alert('Please enter a valid PIN code (minimum 5 digits)');
+        $('#pin_code').focus();
+        return false;
+    }
+    
+    // Validate emergency contact
+    var emergency = $('#emergency_contact_mobile').val();
+    var emergencyDigits = emergency.replace(/[^0-9]/g, '');
+    if (emergencyDigits.length < 10) {
+        alert('Please enter a valid emergency contact mobile number');
+        $('#emergency_contact_mobile').focus();
+        return false;
+    }
+    
+    // Validate consent checkbox
+    if (!$('#consent_given').is(':checked')) {
+        alert('You must consent to data processing to proceed');
+        $('#consent_given').focus();
         return false;
     }
     

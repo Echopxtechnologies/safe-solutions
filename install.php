@@ -28,6 +28,61 @@ log_message('info', 'Prefix: ' . $db_prefix);
 log_message('info', 'Disabling foreign key checks for clean installation...');
 $CI->db->query("SET FOREIGN_KEY_CHECKS = 0");
 
+// ==================== TABLE 1.5: DESTINATION COUNTRIES ====================
+$table_countries = $db_prefix . 'sls_destination_countries';
+log_message('info', 'Creating table: ' . $table_countries);
+
+try {
+    $CI->db->query("DROP TABLE IF EXISTS `{$table_countries}`");
+    
+    $sql_countries = "CREATE TABLE `{$table_countries}` (
+        `id` INT(11) NOT NULL AUTO_INCREMENT,
+        `country_name` VARCHAR(255) NOT NULL,
+        `country_code` VARCHAR(10) NULL COMMENT 'ISO country code',
+        `is_popular` TINYINT(1) DEFAULT 0 COMMENT 'Show in popular list',
+        `display_order` INT(3) DEFAULT 0,
+        `is_active` TINYINT(1) DEFAULT 1,
+        `created_by` INT(11) NOT NULL DEFAULT 1,
+        `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `country_name` (`country_name`),
+        KEY `is_active` (`is_active`),
+        KEY `is_popular` (`is_popular`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    
+    $CI->db->query($sql_countries);
+    log_message('info', 'SUCCESS: Table ' . $table_countries . ' created');
+} catch (Exception $e) {
+    log_message('error', 'ERROR creating ' . $table_countries . ': ' . $e->getMessage());
+    die('Failed to create table: ' . $table_countries . ' - Error: ' . $e->getMessage());
+}
+// ==================== INSERT DEFAULT DESTINATION COUNTRIES ====================
+log_message('info', 'Inserting default destination countries...');
+
+try {
+    $countries = [
+        ['country_name' => 'United States', 'country_code' => 'US', 'is_popular' => 1, 'display_order' => 1],
+        ['country_name' => 'United Kingdom', 'country_code' => 'UK', 'is_popular' => 1, 'display_order' => 2],
+        ['country_name' => 'Canada', 'country_code' => 'CA', 'is_popular' => 1, 'display_order' => 3],
+        ['country_name' => 'Australia', 'country_code' => 'AU', 'is_popular' => 1, 'display_order' => 4],
+        ['country_name' => 'Germany', 'country_code' => 'DE', 'is_popular' => 1, 'display_order' => 5],
+        ['country_name' => 'France', 'country_code' => 'FR', 'is_popular' => 0, 'display_order' => 6],
+        ['country_name' => 'New Zealand', 'country_code' => 'NZ', 'is_popular' => 0, 'display_order' => 7],
+        ['country_name' => 'Singapore', 'country_code' => 'SG', 'is_popular' => 1, 'display_order' => 8],
+        ['country_name' => 'Ireland', 'country_code' => 'IE', 'is_popular' => 0, 'display_order' => 9],
+        ['country_name' => 'Netherlands', 'country_code' => 'NL', 'is_popular' => 0, 'display_order' => 10],
+    ];
+    
+    foreach ($countries as $country) {
+        $CI->db->insert($table_countries, $country);
+        log_message('info', 'Inserted country: ' . $country['country_name']);
+    }
+    
+    log_message('info', 'SUCCESS: ' . count($countries) . ' default countries inserted');
+} catch (Exception $e) {
+    log_message('error', 'ERROR inserting countries: ' . $e->getMessage());
+}
 // ==================== TABLE 1: BRANCH CATEGORIES ====================
 $table1 = $db_prefix . 'sls_branch_categories';
 log_message('info', 'Creating table: ' . $table1);
@@ -154,9 +209,28 @@ try {
         
         -- Identification Documents
         `passport_number` VARCHAR(50) NULL COMMENT 'Student passport number',
+        `passport_expiry_date` DATE NULL COMMENT 'Passport expiry date',
         `unique_id` VARCHAR(50) NULL COMMENT 'Auto-generated unique ID (saflegxxx-333)',
+        
         -- Package/Item Selection
         `item_id` INT(11) NULL COMMENT 'Selected package/item',
+        
+        -- Destination & Program Details
+        `destination_country_id` INT(11) NULL COMMENT 'FK to sls_destination_countries',
+        `university_name` VARCHAR(255) NULL COMMENT 'University/Institution name',
+        `course_program` VARCHAR(255) NULL COMMENT 'Course/Program enrolled in',
+        
+        -- Address Details
+        `city` VARCHAR(100) NULL COMMENT 'City',
+        `state` VARCHAR(100) NULL COMMENT 'State/Province',
+        `pin_code` VARCHAR(20) NULL COMMENT 'PIN/ZIP Code',
+        
+        -- Emergency Contact
+        `emergency_contact_mobile` VARCHAR(20) NULL COMMENT 'Emergency contact mobile',
+        
+        -- Consent
+        `consent_given` TINYINT(1) DEFAULT 0 COMMENT 'Data processing consent',
+        `consent_given_at` DATETIME NULL COMMENT 'When consent was given',
         
         -- Profile Status
         `profile_completion` TINYINT(3) DEFAULT 0,
@@ -196,16 +270,21 @@ try {
         KEY `status` (`status`),
         KEY `is_locked` (`is_locked`),
         KEY `idx_client_id` (`client_id`),
-        KEY `idx_payment_status` (`payment_status`)
+        KEY `idx_destination_country` (`destination_country_id`),
+        KEY `idx_consent` (`consent_given`),
+        KEY `idx_payment_status` (`payment_status`),
+        CONSTRAINT `fk_sls_students_country` 
+            FOREIGN KEY (`destination_country_id`) 
+            REFERENCES `{$table_countries}` (`id`) 
+            ON DELETE SET NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
     
     $CI->db->query($sql3);
-    log_message('info', 'SUCCESS: Table ' . $table3 . ' created (redundant payment fields removed - use sls_payments table)');
+    log_message('info', 'SUCCESS: Table ' . $table3 . ' created with new fields and foreign key constraint');
 } catch (Exception $e) {
     log_message('error', 'ERROR creating ' . $table3 . ': ' . $e->getMessage());
     die('Failed to create table: ' . $table3 . ' - Error: ' . $e->getMessage());
 }
-
 // ==================== TABLE 5: CHANGE REQUESTS ====================
 $table4 = $db_prefix . 'sls_change_requests';
 log_message('info', 'Creating table: ' . $table4);
@@ -328,6 +407,8 @@ try {
     die('Failed to create table: ' . $table7 . ' - Error: ' . $e->getMessage());
 }
 
+
+
 // ==================== RE-ENABLE FOREIGN KEY CHECKS ====================
 log_message('info', 'Re-enabling foreign key checks...');
 $CI->db->query("SET FOREIGN_KEY_CHECKS = 1");
@@ -427,6 +508,7 @@ log_message('info', 'Verifying installation...');
 
 $tables_to_check = [
     $table1 => 'Branch Categories',
+    $table_countries => 'Destination Countries',
     $table2 => 'Branches (with registration_token & is_default)',
     $table5 => 'Items/Packages',
     $table3 => 'Students (cleaned - payment tracking via sls_payments)',

@@ -98,7 +98,46 @@ class Safelegalsolutions_client_model extends App_Model
         
         return $this->db->get()->row();
     }
+    // ==================== DESTINATION COUNTRIES ====================
 
+/**
+ * Get all destination countries
+ * @param array $where Conditions
+ * @return array
+ */
+public function get_all_countries($where = [])
+{
+    if (!empty($where)) {
+        $this->db->where($where);
+    }
+    
+    $this->db->order_by('is_popular', 'DESC');
+    $this->db->order_by('display_order', 'ASC');
+    $this->db->order_by('country_name', 'ASC');
+    return $this->db->get('tblsls_destination_countries')->result();
+}
+
+/**
+ * Get popular countries
+ * @return array
+ */
+public function get_popular_countries()
+{
+    $this->db->where('is_popular', 1);
+    $this->db->where('is_active', 1);
+    $this->db->order_by('display_order', 'ASC');
+    return $this->db->get('tblsls_destination_countries')->result();
+}
+
+/**
+ * Get country by ID
+ * @param int $id
+ * @return object|null
+ */
+public function get_country($id)
+{
+    return $this->db->get_where('tblsls_destination_countries', ['id' => $id])->row();
+}
     /**
      * Get student by email
      * Used for duplicate email check during registration
@@ -253,8 +292,16 @@ public function add_student($data)
             'email',
             'phone',
             'address',
+            'city',                      // ADD
+            'state',                     // ADD
+            'pin_code',  
             'date_of_birth',
-            'passport_number'
+            'passport_number',
+            'passport_expiry_date',      // ADD
+            'emergency_contact_mobile',  // ADD
+            'destination_country_id',    // ADD
+            'university_name',           // ADD
+            'course_program'  
         ];
         
         $filled_count = 0;

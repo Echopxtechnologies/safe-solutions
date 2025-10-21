@@ -127,8 +127,8 @@ class Safelegalsolutions_client extends ClientsController
                 $this->_process_registration_step1($branch, $token, $items);
                 return;
             }
-            
-            $this->_display_registration_form($branch, $token, $items);
+            $countries = $this->_get_countries();
+            $this->_display_registration_form($branch, $token, $items, [], '', $countries);
             
         } catch (Exception $e) {
             log_activity($this->log_prefix . ' - Register Error: ' . $e->getMessage());
@@ -205,6 +205,20 @@ class Safelegalsolutions_client extends ClientsController
                 'address'                    => $registration_data['address'],
                 'date_of_birth'              => $registration_data['date_of_birth'],
                 'passport_number'            => strtoupper($registration_data['passport_number']),
+                 
+            // ========== ADD THESE NEW FIELDS ==========
+            'passport_expiry_date'       => $registration_data['passport_expiry_date'],
+            'destination_country_id'     => $registration_data['destination_country_id'],
+            'university_name'            => $registration_data['university_name'],
+            'course_program'             => $registration_data['course_program'],
+            'city'                       => $registration_data['city'],
+            'state'                      => $registration_data['state'],
+            'pin_code'                   => $registration_data['pin_code'],
+            'emergency_contact_mobile'   => $registration_data['emergency_contact_mobile'],
+            'consent_given'              => $registration_data['consent_given'],
+            'consent_given_at'           => $registration_data['consent_given_at'],
+            // ==========================================
+            
                 'unique_id'                  => $unique_id,
                 'item_id'                    => $registration_data['item_id'],
                 'payment_status'             => 'unpaid',
@@ -1112,6 +1126,64 @@ class Safelegalsolutions_client extends ClientsController
         ], [
             'regex_match' => 'The {field} must contain only uppercase letters and numbers.'
         ]);
+
+        // ========== ADD THESE NEW RULES ==========
+
+$this->form_validation->set_rules('passport_expiry_date', 'Passport Expiry Date', [
+    'required',
+    'callback_validate_future_date'
+]);
+
+$this->form_validation->set_rules('destination_country_id', 'Destination Country', [
+    'required',
+    'numeric'
+]);
+
+$this->form_validation->set_rules('university_name', 'University/Institution Name', [
+    'required',
+    'trim',
+    'max_length[255]'
+]);
+
+$this->form_validation->set_rules('course_program', 'Course/Program', [
+    'required',
+    'trim',
+    'max_length[255]'
+]);
+
+$this->form_validation->set_rules('city', 'City', [
+    'required',
+    'trim',
+    'max_length[100]'
+]);
+
+$this->form_validation->set_rules('state', 'State/Province', [
+    'required',
+    'trim',
+    'max_length[100]'
+]);
+
+$this->form_validation->set_rules('pin_code', 'PIN Code', [
+    'required',
+    'trim',
+    'max_length[20]',
+    'regex_match[/^[0-9]{5,10}$/]'
+], [
+    'regex_match' => 'The {field} must be 5-10 digits.'
+]);
+
+$this->form_validation->set_rules('emergency_contact_mobile', 'Emergency Contact Mobile', [
+    'required',
+    'trim',
+    'max_length[20]',
+    'regex_match[/^[0-9+\-\s()]+$/]'
+], [
+    'regex_match' => 'The {field} must contain only numbers and valid phone characters.'
+]);
+
+$this->form_validation->set_rules('consent_given', 'Data Processing Consent', [
+    'required'
+]);
         
         $this->form_validation->set_rules('item_id', 'Package Selection', [
             'required',
@@ -1131,6 +1203,18 @@ class Safelegalsolutions_client extends ClientsController
             'address'         => trim($post_data['address']),
             'date_of_birth'   => $post_data['date_of_birth'],
             'passport_number' => strtoupper(trim($post_data['passport_number'])),
+            // ========== ADD THESE NEW FIELDS ==========
+            'passport_expiry_date'       => $post_data['passport_expiry_date'],
+            'destination_country_id'     => $post_data['destination_country_id'],
+            'university_name'            => trim($post_data['university_name']),
+            'course_program'             => trim($post_data['course_program']),
+            'city'                       => trim($post_data['city']),
+            'state'                      => trim($post_data['state']),
+            'pin_code'                   => trim($post_data['pin_code']),
+            'emergency_contact_mobile'   => trim($post_data['emergency_contact_mobile']),
+            'consent_given'              => $post_data['consent_given'] == '1' ? 1 : 0,
+            'consent_given_at'           => $post_data['consent_given'] == '1' ? date('Y-m-d H:i:s') : null,
+            // ==========================================
             'item_id'         => $post_data['item_id'],
             'status'          => 'draft'
         ];
@@ -1143,7 +1227,36 @@ class Safelegalsolutions_client extends ClientsController
     // ================================================================
     // VALIDATION CALLBACKS
     // ================================================================
+    /**
+ * Validate future date (passport expiry)
+ * @param string $date Date string
+ * @return bool
+ */
+public function validate_future_date($date)
+{
+    if (empty($date)) {
+        $this->form_validation->set_message('validate_future_date', 'The {field} is required.');
+        return false;
+    }
     
+    try {
+        $expiry_date = new DateTime($date);
+        $today = new DateTime();
+        
+        if ($expiry_date <= $today) {
+            $this->form_validation->set_message('validate_future_date', 
+                'The {field} must be a future date. Your passport appears to be expired.');
+            return false;
+        }
+        
+        return true;
+        
+    } catch (Exception $e) {
+        log_activity($this->log_prefix . ' - Future Date Validation Error: ' . $e->getMessage());
+        $this->form_validation->set_message('validate_future_date', 'Invalid date format.');
+        return false;
+    }
+}
     public function check_duplicate_email($email)
     {
         try {
@@ -1614,7 +1727,7 @@ class Safelegalsolutions_client extends ClientsController
     // VIEW RENDERING METHODS
     // ================================================================
     
-    private function _display_registration_form($branch, $token, $items, $form_data = [], $error = '')
+    private function _display_registration_form($branch, $token, $items, $form_data = [], $error = '', $countries = [])
     {
         $data = [
             'title'      => 'Student Registration - Safe Legal',
@@ -1622,7 +1735,8 @@ class Safelegalsolutions_client extends ClientsController
             'token'      => $token,
             'items'      => $items,
             'form_data'  => $form_data,
-            'error'      => $error
+            'error'      => $error,
+            'countries'  => $countries
         ];
         
         $this->load->view('safelegalsolutions/public_register', $data);
@@ -1698,5 +1812,14 @@ class Safelegalsolutions_client extends ClientsController
         $this->data($data);
         $this->view('safelegalsolutions/client/error');
         $this->layout();
+    }
+    private function _get_countries()
+    {
+        try {
+            return $this->safelegalsolutions_client_model->get_all_countries(['is_active' => 1]);
+        } catch (Exception $e) {
+            log_activity($this->log_prefix . ' - Get Countries Error: ' . $e->getMessage());
+            return [];
+        }
     }
 }

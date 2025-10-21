@@ -27,7 +27,8 @@ private $table_enrollments;
         $this->table_change_requests = db_prefix() . 'sls_change_requests';
         $this->table_items = db_prefix() . 'sls_items';
         $this->table_payments = db_prefix() . 'sls_payments'; // NEW
-    $this->table_enrollments = db_prefix() . 'sls_package_enrollments'; // NEW
+        $this->table_enrollments = db_prefix() . 'sls_package_enrollments'; // NEW
+        $this->table_countries = db_prefix() . 'sls_destination_countries';
     }
 
     // ==================== BRANCH CATEGORIES ====================
@@ -56,6 +57,47 @@ private $table_enrollments;
     {
         return $this->db->get_where($this->table_categories, ['id' => $id])->row();
     }
+
+    // ==================== DESTINATION COUNTRIES ====================
+
+/**
+ * Get all destination countries
+ * @param array $where Conditions
+ * @return array
+ */
+public function get_all_countries($where = [])
+{
+    if (!empty($where)) {
+        $this->db->where($where);
+    }
+    
+    $this->db->order_by('is_popular', 'DESC');
+    $this->db->order_by('display_order', 'ASC');
+    $this->db->order_by('country_name', 'ASC');
+    return $this->db->get($this->table_countries)->result();
+}
+
+/**
+ * Get popular countries
+ * @return array
+ */
+public function get_popular_countries()
+{
+    $this->db->where('is_popular', 1);
+    $this->db->where('is_active', 1);
+    $this->db->order_by('display_order', 'ASC');
+    return $this->db->get($this->table_countries)->result();
+}
+
+/**
+ * Get country by ID
+ * @param int $id
+ * @return object|null
+ */
+public function get_country($id)
+{
+    return $this->db->get_where($this->table_countries, ['id' => $id])->row();
+}
 
     // ==================== BRANCHES ====================
 
@@ -333,12 +375,16 @@ private $table_enrollments;
         $this->db->select($this->table_students . '.*, ' . 
                          $this->table_branches . '.branch_name, ' .
                          $this->table_categories . '.name as category_name, ' .
+                         $this->table_countries . '.country_name as destination_country, ' . // ADD THIS
                          db_prefix() . 'staff.firstname as manager_firstname, ' .
                          db_prefix() . 'staff.lastname as manager_lastname');
         $this->db->from($this->table_students);
         $this->db->join($this->table_branches, 
                        $this->table_branches . '.id = ' . $this->table_students . '.branch_id', 
                        'left');
+        $this->db->join($this->table_countries, 
+                    $this->table_countries . '.id = ' . $this->table_students . '.destination_country_id', 
+                    'left');
         $this->db->join($this->table_categories, 
                        $this->table_categories . '.id = ' . $this->table_branches . '.category_id', 
                        'left');

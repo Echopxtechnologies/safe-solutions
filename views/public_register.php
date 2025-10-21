@@ -217,7 +217,7 @@
         
         textarea.form-control {
             resize: vertical;
-            min-height: 100px;
+            min-height: 80px;
         }
         
         .text-muted {
@@ -346,6 +346,37 @@
         .package-price-breakdown small {
             color: #888;
             font-size: 12px;
+        }
+        
+        /* Consent Checkbox */
+        .consent-section {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .consent-section .checkbox {
+            margin: 0;
+        }
+        
+        .consent-section label {
+            font-size: 14px;
+            font-weight: normal;
+            cursor: pointer;
+            display: flex;
+            align-items: start;
+            gap: 10px;
+        }
+        
+        .consent-section input[type="checkbox"] {
+            margin-top: 3px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            flex-shrink: 0;
+            accent-color: #667eea;
         }
         
         /* Submit Button */
@@ -524,7 +555,7 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="student_name">
-                                        <span class="text-danger">*</span> Full Name
+                                    <span class="text-danger">*</span> Full Name
                                     </label>
                                     <input type="text" 
                                            name="student_name" 
@@ -532,7 +563,7 @@
                                            class="form-control" 
                                            required
                                            placeholder="Enter your full name"
-                                           value="<?php echo isset($form_data['student_name']) ? htmlspecialchars($form_data['student_name']) : set_value('student_name'); ?>">
+                                           value="<?php echo set_value('student_name'); ?>">
                                     <small class="text-muted">As per official documents</small>
                                 </div>
                             </div>
@@ -548,14 +579,14 @@
                                            class="form-control" 
                                            required
                                            max="<?php echo date('Y-m-d', strtotime('-18 years')); ?>"
-                                           value="<?php echo isset($form_data['date_of_birth']) ? $form_data['date_of_birth'] : set_value('date_of_birth'); ?>">
+                                           value="<?php echo set_value('date_of_birth'); ?>">
                                     <small class="text-muted">You must be at least 18 years old</small>
                                 </div>
                             </div>
                         </div>
 
                         <div class="row">
-                            <div class="col-md-12">
+                            <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="passport_number">
                                         <span class="text-danger">*</span> Passport Number
@@ -570,8 +601,24 @@
                                            minlength="6"
                                            maxlength="50"
                                            style="text-transform: uppercase;"
-                                           value="<?php echo isset($form_data['passport_number']) ? htmlspecialchars($form_data['passport_number']) : set_value('passport_number'); ?>">
+                                           value="<?php echo set_value('passport_number'); ?>">
                                     <small class="text-muted">Valid passport number (letters and numbers only, minimum 6 characters)</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="passport_expiry_date">
+                                        <span class="text-danger">*</span> Passport Expiry Date
+                                    </label>
+                                    <input type="date" 
+                                           name="passport_expiry_date" 
+                                           id="passport_expiry_date" 
+                                           class="form-control" 
+                                           required
+                                           min="<?php echo date('Y-m-d'); ?>"
+                                           value="<?php echo set_value('passport_expiry_date'); ?>">
+                                    <small class="text-muted">Passport must be valid</small>
                                 </div>
                             </div>
                         </div>
@@ -598,7 +645,7 @@
                                            class="form-control" 
                                            required
                                            placeholder="your.email@example.com"
-                                           value="<?php echo isset($form_data['email']) ? htmlspecialchars($form_data['email']) : set_value('email'); ?>">
+                                           value="<?php echo set_value('email'); ?>">
                                     <small class="text-muted">Your login credentials will be sent here</small>
                                 </div>
                             </div>
@@ -615,7 +662,7 @@
                                            required
                                            placeholder="+91 9876543210"
                                            pattern="[0-9+\-\s()]+"
-                                           value="<?php echo isset($form_data['phone']) ? htmlspecialchars($form_data['phone']) : set_value('phone'); ?>">
+                                           value="<?php echo set_value('phone'); ?>">
                                     <small class="text-muted">10 digit mobile number</small>
                                 </div>
                             </div>
@@ -625,15 +672,156 @@
                             <div class="col-md-12">
                                 <div class="form-group">
                                     <label for="address">
-                                        <span class="text-danger">*</span> Complete Address
+                                        <span class="text-danger">*</span> Street Address
                                     </label>
                                     <textarea name="address" 
                                               id="address" 
                                               class="form-control" 
-                                              rows="3" 
+                                              rows="2" 
                                               required
-                                              placeholder="Enter your complete residential address"><?php echo isset($form_data['address']) ? htmlspecialchars($form_data['address']) : set_value('address'); ?></textarea>
-                                    <small class="text-muted">Street, City, State, Pincode</small>
+                                              placeholder="House/Flat No., Street, Area"><?php echo set_value('address'); ?></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="city">
+                                        <span class="text-danger">*</span> City
+                                    </label>
+                                    <input type="text" 
+                                           name="city" 
+                                           id="city" 
+                                           class="form-control" 
+                                           required
+                                           placeholder="Enter city"
+                                           value="<?php echo set_value('city'); ?>">
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="state">
+                                        <span class="text-danger">*</span> State/Province
+                                    </label>
+                                    <input type="text" 
+                                           name="state" 
+                                           id="state" 
+                                           class="form-control" 
+                                           required
+                                           placeholder="Enter state"
+                                           value="<?php echo set_value('state'); ?>">
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="pin_code">
+                                        <span class="text-danger">*</span> PIN Code
+                                    </label>
+                                    <input type="text" 
+                                           name="pin_code" 
+                                           id="pin_code" 
+                                           class="form-control" 
+                                           required
+                                           placeholder="000000"
+                                           pattern="[0-9]{5,10}"
+                                           value="<?php echo set_value('pin_code'); ?>">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="emergency_contact_mobile">
+                                        <span class="text-danger">*</span> Emergency Contact Mobile
+                                    </label>
+                                    <input type="text" 
+                                           name="emergency_contact_mobile" 
+                                           id="emergency_contact_mobile" 
+                                           class="form-control" 
+                                           required
+                                           placeholder="+91 9876543210"
+                                           pattern="[0-9+\-\s()]+"
+                                           value="<?php echo set_value('emergency_contact_mobile'); ?>">
+                                    <small class="text-muted">Emergency contact number (can be different from your phone)</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Destination & Program Details -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <h4>
+                            <i class="fa fa-globe"></i> Destination & Program Details
+                        </h4>
+                    </div>
+                    <div class="form-section-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="destination_country_id">
+                                        <span class="text-danger">*</span> Destination Country
+                                    </label>
+                                    <select name="destination_country_id" 
+                                            id="destination_country_id" 
+                                            class="form-control" 
+                                            required>
+                                        <option value="">-- Select Country --</option>
+                                        <?php 
+                                        if (!empty($countries)): 
+                                            foreach ($countries as $country): 
+                                        ?>
+                                            <option value="<?php echo $country->id; ?>"
+                                                    <?php echo (set_value('destination_country_id') == $country->id) ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($country->country_name); ?>
+                                                <?php if ($country->is_popular): ?>
+                                                    ✨
+                                                <?php endif; ?>
+                                            </option>
+                                        <?php 
+                                            endforeach;
+                                        endif; 
+                                        ?>
+                                    </select>
+                                    <small class="text-muted">Select country where you plan to study</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="university_name">
+                                        <span class="text-danger">*</span> University/Institution Name
+                                    </label>
+                                    <input type="text" 
+                                           name="university_name" 
+                                           id="university_name" 
+                                           class="form-control" 
+                                           required
+                                           placeholder="Enter university/institution name"
+                                           value="<?php echo set_value('university_name'); ?>">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="course_program">
+                                        <span class="text-danger">*</span> Course/Program
+                                    </label>
+                                    <input type="text" 
+                                           name="course_program" 
+                                           id="course_program" 
+                                           class="form-control" 
+                                           required
+                                           placeholder="E.g., MBA, Bachelor of Computer Science, etc."
+                                           value="<?php echo set_value('course_program'); ?>">
+                                    <small class="text-muted">Enter the course/program you're enrolling in</small>
                                 </div>
                             </div>
                         </div>
@@ -656,7 +844,6 @@
                                             <input type="radio" 
                                                    name="item_id" 
                                                    value="<?php echo $item->id; ?>" 
-                                                   <?php echo (isset($form_data['item_id']) && $form_data['item_id'] == $item->id) ? 'checked' : ''; ?>
                                                    <?php echo (set_value('item_id') == $item->id) ? 'checked' : ''; ?>
                                                    required>
                                             
@@ -715,6 +902,26 @@
                             </div>
                         <?php endif; ?>
                     </div>
+                </div>
+
+                <!-- Data Processing Consent -->
+                <div class="consent-section">
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox" 
+                                   name="consent_given" 
+                                   id="consent_given" 
+                                   value="1" 
+                                   required
+                                   <?php echo (set_value('consent_given') == '1') ? 'checked' : ''; ?>>
+                            <span>
+                                <strong>I consent</strong> to SAFE Legal Solutions collecting and processing my personal data for providing legal protection services. I understand that I will need to complete a detailed registration form for full service activation.
+                            </span>
+                        </label>
+                    </div>
+                    <small style="display: block; margin-top: 10px; color: #856404;">
+                        <i class="fa fa-info-circle"></i> Your data will be processed in accordance with applicable data protection laws. You can withdraw consent at any time.
+                    </small>
                 </div>
 
                 <!-- Required Fields Note -->
@@ -804,9 +1011,18 @@ $(document).ready(function() {
             return false;
         }
         
+        // Passport expiry validation
+        var expiryDate = new Date($('#passport_expiry_date').val());
+        var today = new Date();
+        if (expiryDate <= today) {
+            e.preventDefault();
+            alert('Passport expiry date must be in the future');
+            $('#passport_expiry_date').focus();
+            return false;
+        }
+        
         // Age validation
         var dob = new Date($('#date_of_birth').val());
-        var today = new Date();
         var age = today.getFullYear() - dob.getFullYear();
         var monthDiff = today.getMonth() - dob.getMonth();
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
@@ -817,6 +1033,76 @@ $(document).ready(function() {
             e.preventDefault();
             alert('You must be at least 18 years old to register. Current age: ' + age + ' years.');
             $('#date_of_birth').focus();
+            return false;
+        }
+        
+        // Destination country validation
+        if (!$('#destination_country_id').val()) {
+            e.preventDefault();
+            alert('Please select your destination country');
+            $('#destination_country_id').focus();
+            return false;
+        }
+        
+        // University name validation
+        if (!$('#university_name').val().trim()) {
+            e.preventDefault();
+            alert('Please enter university/institution name');
+            $('#university_name').focus();
+            return false;
+        }
+        
+        // Course/program validation
+        if (!$('#course_program').val().trim()) {
+            e.preventDefault();
+            alert('Please enter course/program');
+            $('#course_program').focus();
+            return false;
+        }
+        
+        // City validation
+        if (!$('#city').val().trim()) {
+            e.preventDefault();
+            alert('Please enter city');
+            $('#city').focus();
+            return false;
+        }
+        
+        // State validation
+        if (!$('#state').val().trim()) {
+            e.preventDefault();
+            alert('Please enter state');
+            $('#state').focus();
+            return false;
+        }
+        
+        // PIN code validation
+        var pin = $('#pin_code').val();
+        if (!pin || pin.trim() === '' || pin.length < 5) {
+            e.preventDefault();
+            alert('Please enter a valid PIN code (minimum 5 digits)');
+            $('#pin_code').focus();
+            return false;
+        }
+        
+        // Emergency contact validation
+        var emergency = $('#emergency_contact_mobile').val();
+        var emergencyDigits = emergency.replace(/[^0-9]/g, '');
+        if (emergencyDigits.length < 10) {
+            e.preventDefault();
+            alert('Please enter a valid emergency contact mobile number');
+            $('#emergency_contact_mobile').focus();
+            return false;
+        }
+        
+        // Consent checkbox validation
+        if (!$('#consent_given').is(':checked')) {
+            e.preventDefault();
+            alert('You must consent to data processing to proceed. Please check the consent checkbox.');
+            $('#consent_given').focus();
+            $('html, body').animate({
+                scrollTop: $('.consent-section').offset().top - 100
+            }, 500);
             return false;
         }
         
