@@ -30,7 +30,7 @@
 
                         <!-- TAB CONTENT -->
                         <div class="tab-content mtop20">
-                            <!-- TAB 1: BASIC INFO (all the existing form fields) -->
+                            <!-- TAB 1: BASIC INFO -->
                             <div role="tabpanel" class="tab-pane active" id="tab_basic_info">
                         <?php endif; ?>
 
@@ -319,12 +319,10 @@
                                             class="form-control selectpicker" multiple 
                                             data-live-search="true" data-actions-box="true">
                                         <?php
-                                        // Load countries from database
                                         $CI =& get_instance();
                                         $CI->load->model('safelegalsolutions_model');
                                         $all_countries = $CI->safelegalsolutions_model->get_all_countries(['is_active' => 1]);
                                         
-                                        // Get selected countries (JSON decode)
                                         $selected_countries = [];
                                         if (isset($branch) && !empty($branch->primary_destinations)) {
                                             $selected_countries = json_decode($branch->primary_destinations, true);
@@ -480,7 +478,6 @@
                         </div>
 
                         <?php if (!isset($branch)): ?>
-                        <!-- CREATE NEW PARTNER OPTION (Only for new branches) -->
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group">
@@ -495,7 +492,6 @@
                             </div>
                         </div>
 
-                        <!-- NEW PARTNER CREATION FORM (Hidden by default) -->
                         <div id="newStaffSection" style="display: none;">
                             <div class="alert alert-info">
                                 <i class="fa fa-info-circle"></i> Creating a new partner will:
@@ -566,7 +562,6 @@
                         </div>
                         <?php endif; ?>
 
-                        <!-- SELECT EXISTING PARTNER (Always visible, hidden when creating new) -->
                         <div id="existingStaffSection">
                             <div class="row">
                                 <div class="col-md-12">
@@ -592,7 +587,6 @@
                             </div>
                         </div>
 
-                        <!-- SUBMIT BUTTONS -->
                         <div class="form-group mtop30">
                             <button type="submit" class="btn btn-primary btn-lg">
                                 <i class="fa fa-save"></i> 
@@ -607,20 +601,18 @@
 
                         <?php if (isset($branch)): ?>
                             </div>
-                            <!-- END TAB 1: BASIC INFO -->
 
-                            <!-- TAB 2: DOCUMENTS -->
                             <div role="tabpanel" class="tab-pane" id="tab_documents">
                                 <div class="row">
                                     <div class="col-md-12">
                                         <div class="alert alert-info">
                                             <i class="fa fa-info-circle"></i> Upload partner documents such as GST Certificate, PAN Card, Business License, Partnership Agreement, etc.
                                             <br><strong>Allowed formats:</strong> PDF, DOC, DOCX, JPG, PNG, XLS, XLSX (Max 10MB per file)
+                                            <br><strong>Storage:</strong> Files are stored securely in database as binary data (LONGBLOB)
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- UPLOAD FORM -->
                                 <div class="panel panel-primary">
                                     <div class="panel-heading">
                                         <h4 class="panel-title">
@@ -629,7 +621,7 @@
                                     </div>
                                     <div class="panel-body">
                                         <form id="uploadDocumentForm" enctype="multipart/form-data">
-                                            <input type="hidden" name="branch_id" id="doc_branch_id" value="<?php echo $branch->id; ?>">
+                                            <input type="hidden" name="branch_id" value="<?php echo $branch->id; ?>">
                                             
                                             <div class="row">
                                                 <div class="col-md-4">
@@ -684,7 +676,6 @@
                                     </div>
                                 </div>
 
-                                <!-- DOCUMENTS LIST -->
                                 <div class="panel panel-default">
                                     <div class="panel-heading">
                                         <h4 class="panel-title">
@@ -693,7 +684,7 @@
                                     </div>
                                     <div class="panel-body">
                                         <div class="table-responsive">
-                                            <table class="table table-striped table-bordered" id="documentsTable">
+                                            <table class="table table-striped table-bordered">
                                                 <thead>
                                                     <tr>
                                                         <th width="5%">#</th>
@@ -717,9 +708,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <!-- END TAB 2: DOCUMENTS -->
                         </div>
-                        <!-- END TAB CONTENT -->
                         <?php endif; ?>
 
                     </div>
@@ -729,14 +718,11 @@
     </div>
 </div>
 
-<!-- Category Creation Modal -->
 <div class="modal fade" id="categoryModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                 <h4 class="modal-title">Create New Category</h4>
             </div>
             <div class="modal-body">
@@ -766,44 +752,27 @@
     'use strict';
     
     $(document).ready(function() {
-        // Initialize selectpicker
         if (typeof $.fn.selectpicker !== 'undefined') {
             $('.selectpicker').selectpicker('refresh');
         }
         
-        // ============================================================
-        // TOGGLE: Create New Partner vs Select Existing
-        // ============================================================
         $('#create_new_staff').on('change', function() {
             if ($(this).is(':checked')) {
                 $('#newStaffSection').slideDown();
                 $('#existingStaffSection').slideUp();
-                
-                // Make new staff fields required
                 $('#staff_email, #staff_firstname, #staff_lastname').prop('required', true);
-                
-                // Make existing staff select NOT required
-                $('#nodal_partner_manager_id').prop('required', false);
-                $('#nodal_partner_manager_id').val('').selectpicker('refresh');
+                $('#nodal_partner_manager_id').prop('required', false).val('').selectpicker('refresh');
             } else {
                 $('#newStaffSection').slideUp();
                 $('#existingStaffSection').slideDown();
-                
-                // Make new staff fields NOT required
                 $('#staff_email, #staff_firstname, #staff_lastname').prop('required', false);
-                
-                // Make existing staff select required
                 $('#nodal_partner_manager_id').prop('required', true);
             }
         });
         
-        // ============================================================
-        // FORM VALIDATION BEFORE SUBMIT
-        // ============================================================
         $('form[action*="safelegalsolutions/branch"]').on('submit', function(e) {
             var createNewStaff = $('#create_new_staff').is(':checked');
             
-            // Validate consent checkboxes (required)
             if (!$('#terms_accepted').is(':checked')) {
                 alert('You must accept the Terms and Conditions');
                 e.preventDefault();
@@ -816,7 +785,6 @@
                 return false;
             }
             
-            // Validate PIN code
             var pinCode = $('#pin_code').val().trim();
             if (pinCode && !/^[0-9]{6}$/.test(pinCode)) {
                 alert('PIN Code must be exactly 6 digits');
@@ -825,43 +793,35 @@
             }
             
             if (createNewStaff) {
-                // Validate new staff fields
                 var email = $('#staff_email').val().trim();
                 var firstname = $('#staff_firstname').val().trim();
                 var lastname = $('#staff_lastname').val().trim();
                 
                 if (!email || !firstname || !lastname) {
-                    alert('Please fill in all required partner fields (Email, First Name, Last Name)');
+                    alert('Please fill in all required partner fields');
                     e.preventDefault();
                     return false;
                 }
                 
-                // Email validation
-                var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailPattern.test(email)) {
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
                     alert('Please enter a valid email address');
                     e.preventDefault();
                     return false;
                 }
             } else {
-                // Validate existing staff selection
-                var managerId = $('#nodal_partner_manager_id').val();
-                if (!managerId) {
-                    alert('Please select a partner or check "Create New Partner Account"');
+                if (!$('#nodal_partner_manager_id').val()) {
+                    alert('Please select a partner');
                     e.preventDefault();
                     return false;
                 }
             }
         });
         
-        // ============================================================
-        // CATEGORY CREATION (AJAX)
-        // ============================================================
         $('#saveCategoryBtn').on('click', function() {
             var btn = $(this);
             var categoryName = $('#new_category_name').val().trim();
             
-            if (categoryName === '') {
+            if (!categoryName) {
                 $('#category_error').removeClass('hide').text('Category name is required');
                 return;
             }
@@ -869,66 +829,40 @@
             btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Saving...');
             $('#category_error').addClass('hide');
             
-            $.ajax({
-                url: admin_url + 'safelegalsolutions/create_category_ajax',
-                type: 'POST',
-                data: {
-                    name: categoryName,
-                    <?php echo $this->security->get_csrf_token_name(); ?>: '<?php echo $this->security->get_csrf_hash(); ?>'
-                },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        var newOption = new Option(response.category.name, response.category.id, true, true);
-                        $('#category_id').append(newOption);
-                        $('#category_id').selectpicker('refresh');
-                        
-                        $('#categoryModal').modal('hide');
-                        $('#new_category_name').val('');
-                        
-                        alert_float('success', 'Category created successfully');
-                    } else {
-                        $('#category_error').removeClass('hide').text(response.message || 'Failed to create category');
-                    }
-                },
-                error: function() {
-                    $('#category_error').removeClass('hide').text('An error occurred. Please try again.');
-                },
-                complete: function() {
-                    btn.prop('disabled', false).html('<i class="fa fa-save"></i> Save Category');
+            $.post(admin_url + 'safelegalsolutions/create_category_ajax', {name: categoryName})
+            .done(function(response) {
+                if (response.success) {
+                    $('#category_id').append(new Option(response.category.name, response.category.id, true, true)).selectpicker('refresh');
+                    $('#categoryModal').modal('hide');
+                    $('#new_category_name').val('');
+                    alert_float('success', 'Category created successfully');
+                } else {
+                    $('#category_error').removeClass('hide').text(response.message || 'Failed to create category');
                 }
+            })
+            .fail(function() {
+                $('#category_error').removeClass('hide').text('An error occurred. Please try again.');
+            })
+            .always(function() {
+                btn.prop('disabled', false).html('<i class="fa fa-save"></i> Save Category');
             });
         });
         
-        // Reset category modal when closed
         $('#categoryModal').on('hidden.bs.modal', function() {
             $('#new_category_name').val('');
             $('#category_error').addClass('hide');
         });
         
-        // ============================================================
-        // DOCUMENTS TAB FUNCTIONALITY
-        // ============================================================
         <?php if (isset($branch)): ?>
         var branchId = <?php echo $branch->id; ?>;
 
-        // Load documents when tab is clicked
-        $('a[href="#tab_documents"]').on('shown.bs.tab', function() {
-            loadDocuments();
-        });
+        $('a[href="#tab_documents"]').on('shown.bs.tab', loadDocuments);
+        loadDocuments();
 
-        // Load documents on page load if editing
-        if ($('#tab_documents').length) {
-            loadDocuments();
-        }
-
-        // Upload document
         $('#uploadDocBtn').on('click', function() {
             var btn = $(this);
-            var form = $('#uploadDocumentForm')[0];
-            var formData = new FormData(form);
+            var formData = new FormData($('#uploadDocumentForm')[0]);
             
-            // Validation
             if (!$('#document_type').val()) {
                 alert('Please select document type');
                 return;
@@ -939,9 +873,8 @@
                 return;
             }
             
-            // Check file size (10MB = 10485760 bytes)
             if ($('#document')[0].files[0].size > 10485760) {
-                alert('File size exceeds 10MB limit');
+                alert('File size exceeds 10MB');
                 return;
             }
             
@@ -954,22 +887,16 @@
                 processData: false,
                 contentType: false,
                 dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        alert_float('success', response.message);
-                        
-                        // Reset form
+                success: function(r) {
+                    alert_float(r.success ? 'success' : 'danger', r.message);
+                    if (r.success) {
                         $('#uploadDocumentForm')[0].reset();
                         $('#document_type').selectpicker('refresh');
-                        
-                        // Reload documents
                         loadDocuments();
-                    } else {
-                        alert_float('danger', response.message);
                     }
                 },
                 error: function() {
-                    alert_float('danger', 'An error occurred while uploading');
+                    alert_float('danger', 'Upload failed');
                 },
                 complete: function() {
                     btn.prop('disabled', false).html('<i class="fa fa-upload"></i> Upload Document');
@@ -977,124 +904,66 @@
             });
         });
 
-        // Load documents function
         function loadDocuments() {
-            $.ajax({
-                url: admin_url + 'safelegalsolutions/get_partner_documents_ajax/' + branchId,
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success && response.documents) {
-                        var tbody = $('#documentsTableBody');
-                        tbody.empty();
-                        
-                        if (response.documents.length === 0) {
-                            tbody.append('<tr><td colspan="7" class="text-center text-muted">No documents uploaded yet</td></tr>');
-                            $('#documents_count').text('0');
-                        } else {
-                            $('#documents_count').text(response.documents.length);
-                            
-                            $.each(response.documents, function(index, doc) {
-                                var verifiedBadge = doc.is_verified == 1 
-                                    ? '<span class="label label-success"><i class="fa fa-check"></i> Verified</span>'
-                                    : '<span class="label label-warning"><i class="fa fa-clock-o"></i> Pending</span>';
-                                
-                                var fileSize = formatBytes(doc.file_size);
-                                var uploadedBy = doc.uploaded_by_firstname + ' ' + doc.uploaded_by_lastname;
-                                
-                                var row = '<tr>' +
-                                    '<td>' + (index + 1) + '</td>' +
-                                    '<td>' + doc.document_type + '</td>' +
-                                    '<td>' +
-                                        '<i class="fa fa-file-o"></i> ' + doc.file_name +
-                                        (doc.description ? '<br><small class="text-muted">' + doc.description + '</small>' : '') +
-                                    '</td>' +
-                                    '<td>' + fileSize + '</td>' +
-                                    '<td>' + uploadedBy + '<br><small class="text-muted">' + doc.uploaded_at + '</small></td>' +
-                                    '<td>' + verifiedBadge + '</td>' +
-                                    '<td class="text-center">' +
-                                        '<a href="' + admin_url + 'safelegalsolutions/download_partner_document/' + doc.id + '" ' +
-                                           'class="btn btn-xs btn-info" title="Download">' +
-                                            '<i class="fa fa-download"></i>' +
-                                        '</a> ';
-                                
-                                // Verify button (only if not verified)
-                                if (doc.is_verified == 0) {
-                                    row += '<button type="button" class="btn btn-xs btn-success verify-doc" ' +
-                                              'data-id="' + doc.id + '" title="Mark as Verified">' +
-                                              '<i class="fa fa-check"></i>' +
-                                           '</button> ';
-                                }
-                                
-                                // Delete button
-                                row += '<button type="button" class="btn btn-xs btn-danger delete-doc" ' +
-                                          'data-id="' + doc.id + '" title="Delete">' +
-                                          '<i class="fa fa-trash"></i>' +
-                                       '</button>' +
-                                    '</td>' +
-                                '</tr>';
-                                
-                                tbody.append(row);
-                            });
-                        }
-                    }
-                },
-                error: function() {
-                    $('#documentsTableBody').html('<tr><td colspan="7" class="text-center text-danger">Error loading documents</td></tr>');
+            $.get(admin_url + 'safelegalsolutions/get_partner_documents_ajax/' + branchId, function(r) {
+                var tbody = $('#documentsTableBody');
+                tbody.empty();
+                
+                if (!r.success || !r.documents.length) {
+                    tbody.append('<tr><td colspan="7" class="text-center text-muted">No documents uploaded yet</td></tr>');
+                    $('#documents_count').text('0');
+                    return;
                 }
-            });
+                
+                $('#documents_count').text(r.documents.length);
+                
+                $.each(r.documents, function(i, d) {
+                    var badge = d.is_verified == 1 
+                        ? '<span class="label label-success"><i class="fa fa-check"></i> Verified</span>'
+                        : '<span class="label label-warning"><i class="fa fa-clock-o"></i> Pending</span>';
+                    
+                    tbody.append(
+                        '<tr>' +
+                        '<td>' + (i + 1) + '</td>' +
+                        '<td>' + d.document_type + '</td>' +
+                        '<td><i class="fa fa-file-o"></i> ' + d.file_name + (d.description ? '<br><small class="text-muted">' + d.description + '</small>' : '') + '</td>' +
+                        '<td>' + formatBytes(d.file_size) + '</td>' +
+                        '<td>' + d.uploaded_by_firstname + ' ' + d.uploaded_by_lastname + '<br><small>' + d.uploaded_at + '</small></td>' +
+                        '<td>' + badge + '</td>' +
+                        '<td class="text-center">' +
+                        '<a href="' + admin_url + 'safelegalsolutions/download_partner_document/' + d.id + '" class="btn btn-xs btn-info" title="Download"><i class="fa fa-download"></i></a> ' +
+                        (d.is_verified == 0 ? '<button class="btn btn-xs btn-success verify-doc" data-id="' + d.id + '" title="Verify"><i class="fa fa-check"></i></button> ' : '') +
+                        '<button class="btn btn-xs btn-danger delete-doc" data-id="' + d.id + '" title="Delete"><i class="fa fa-trash"></i></button>' +
+                        '</td>' +
+                        '</tr>'
+                    );
+                });
+            }, 'json');
         }
 
-        // Verify document
         $(document).on('click', '.verify-doc', function() {
-            var docId = $(this).data('id');
-            
             if (confirm('Mark this document as verified?')) {
-                $.ajax({
-                    url: admin_url + 'safelegalsolutions/verify_partner_document/' + docId,
-                    type: 'POST',
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            alert_float('success', response.message);
-                            loadDocuments();
-                        } else {
-                            alert_float('danger', response.message);
-                        }
-                    }
-                });
+                $.post(admin_url + 'safelegalsolutions/verify_partner_document/' + $(this).data('id'), function(r) {
+                    alert_float(r.success ? 'success' : 'danger', r.message);
+                    if (r.success) loadDocuments();
+                }, 'json');
             }
         });
 
-        // Delete document
         $(document).on('click', '.delete-doc', function() {
-            var docId = $(this).data('id');
-            
-            if (confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
-                $.ajax({
-                    url: admin_url + 'safelegalsolutions/delete_partner_document/' + docId,
-                    type: 'POST',
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            alert_float('success', response.message);
-                            loadDocuments();
-                        } else {
-                            alert_float('danger', response.message);
-                        }
-                    }
-                });
+            if (confirm('Delete this document? This cannot be undone.')) {
+                $.post(admin_url + 'safelegalsolutions/delete_partner_document/' + $(this).data('id'), function(r) {
+                    alert_float(r.success ? 'success' : 'danger', r.message);
+                    if (r.success) loadDocuments();
+                }, 'json');
             }
         });
 
-        // Format bytes helper
-        function formatBytes(bytes, decimals = 2) {
+        function formatBytes(bytes) {
             if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const dm = decimals < 0 ? 0 : decimals;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+            var k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            var i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
         <?php endif; ?>
     });
@@ -1103,7 +972,6 @@
 </script>
 
 <style>
-/* Custom styles for better UX */
 #newStaffSection {
     background-color: #f8f9fa;
     padding: 20px;
@@ -1111,48 +979,27 @@
     border: 1px solid #dee2e6;
     margin-bottom: 20px;
 }
-
 .checkbox-primary input[type="checkbox"]:checked + label::before {
     background-color: #2563eb;
     border-color: #2563eb;
 }
-
 .checkbox-danger input[type="checkbox"]:checked + label::before {
     background-color: #dc3545;
     border-color: #dc3545;
 }
-
 .checkbox-info input[type="checkbox"]:checked + label::before {
     background-color: #17a2b8;
     border-color: #17a2b8;
 }
-
-.alert ul {
-    margin-bottom: 0;
-}
-
 .text-primary {
     color: #2563eb !important;
 }
-
-/* Tab content styling */
 .tab-content {
     border: 1px solid #ddd;
     border-top: none;
     padding: 20px;
     background-color: #fff;
 }
-
-.nav-tabs > li > a {
-    color: #555;
-}
-
-.nav-tabs > li.active > a,
-.nav-tabs > li.active > a:hover,
-.nav-tabs > li.active > a:focus {
-    font-weight: bold;
-}
-
 #documents_count {
     background-color: #dc3545;
     color: white;
