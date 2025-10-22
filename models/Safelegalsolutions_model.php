@@ -2248,7 +2248,30 @@ public function create_student_invoice($student_id)
 }
 
 // ==================== PARTNER DOCUMENTS (LONGBLOB STORAGE) ====================
+public function add_document($data)
+{
+    // Insert with binary data
+    $this->db->insert(db_prefix() . 'sls_partner_documents', $data);
+    return $this->db->insert_id();
+}
 
+public function get_document($id)
+{
+    return $this->db->where('id', $id)->get(db_prefix() . 'sls_partner_documents')->row();
+}
+
+public function get_branch_documents($branch_id)
+{
+    return $this->db->where('branch_id', $branch_id)
+                    ->order_by('uploaded_at', 'DESC')
+                    ->get(db_prefix() . 'sls_partner_documents')
+                    ->result();
+}
+
+public function delete_document($id)
+{
+    return $this->db->where('id', $id)->delete(db_prefix() . 'sls_partner_documents');
+}
 /**
  * Get all documents for a branch (without binary data)
  * @param int $branch_id Branch ID

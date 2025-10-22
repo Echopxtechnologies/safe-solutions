@@ -602,17 +602,18 @@
                         <?php if (isset($branch)): ?>
                             </div>
 
+                          <!-- TAB 2: DOCUMENTS -->
                             <div role="tabpanel" class="tab-pane" id="tab_documents">
                                 <div class="row">
                                     <div class="col-md-12">
                                         <div class="alert alert-info">
-                                            <i class="fa fa-info-circle"></i> Upload partner documents such as GST Certificate, PAN Card, Business License, Partnership Agreement, etc.
-                                            <br><strong>Allowed formats:</strong> PDF, DOC, DOCX, JPG, PNG, XLS, XLSX (Max 10MB per file)
-                                            <br><strong>Storage:</strong> Files are stored securely in database as binary data (LONGBLOB)
+                                            <i class="fa fa-info-circle"></i> Upload partner documents directly to database. Files are stored as LONGBLOB.
+                                            <br><strong>Allowed formats:</strong> PDF, DOC, DOCX, JPG, PNG (Max 10MB)
                                         </div>
                                     </div>
                                 </div>
 
+                                <!-- Simple Upload Form WITH CSRF FIX -->
                                 <div class="panel panel-primary">
                                     <div class="panel-heading">
                                         <h4 class="panel-title">
@@ -620,62 +621,60 @@
                                         </h4>
                                     </div>
                                     <div class="panel-body">
-                                        <form id="uploadDocumentForm" enctype="multipart/form-data">
-                                            <input type="hidden" name="branch_id" value="<?php echo $branch->id; ?>">
-                                            
-                                            <div class="row">
-                                                <div class="col-md-4">
-                                                    <div class="form-group">
-                                                        <label for="document_type" class="control-label">
-                                                            <span class="text-danger">*</span> Document Type
-                                                        </label>
-                                                        <select name="document_type" id="document_type" class="form-control selectpicker" required>
-                                                            <option value="">Select Type</option>
-                                                            <option value="GST Certificate">GST Certificate</option>
-                                                            <option value="PAN Card">PAN Card</option>
-                                                            <option value="Business License">Business License</option>
-                                                            <option value="Partnership Agreement">Partnership Agreement</option>
-                                                            <option value="Bank Details">Bank Details</option>
-                                                            <option value="ID Proof">ID Proof</option>
-                                                            <option value="Address Proof">Address Proof</option>
-                                                            <option value="Other">Other</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-
-                                                <div class="col-md-8">
-                                                    <div class="form-group">
-                                                        <label for="description" class="control-label">
-                                                            Description/Notes
-                                                        </label>
-                                                        <input type="text" name="description" id="description" class="form-control" 
-                                                               placeholder="Brief description of the document">
-                                                    </div>
+                                        <!-- FIXED: Using form_open_multipart for CSRF token -->
+                                        <?php echo form_open_multipart(
+                                            admin_url('safelegalsolutions/upload_document/' . $branch->id), 
+                                            ['id' => 'simple-upload-form']
+                                        ); ?>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="document_type">Document Type <span class="text-danger">*</span></label>
+                                                    <select name="document_type" id="document_type" class="form-control" required>
+                                                        <option value="">Select Type</option>
+                                                        <option value="GST Certificate">GST Certificate</option>
+                                                        <option value="PAN Card">PAN Card</option>
+                                                        <option value="Partnership Agreement">Partnership Agreement</option>
+                                                        <option value="Bank Details">Bank Details</option>
+                                                        <option value="Address Proof">Address Proof</option>
+                                                        <option value="Other">Other</option>
+                                                    </select>
                                                 </div>
                                             </div>
 
-                                            <div class="row">
-                                                <div class="col-md-12">
-                                                    <div class="form-group">
-                                                        <label for="document" class="control-label">
-                                                            <span class="text-danger">*</span> Select File
-                                                        </label>
-                                                        <input type="file" name="document" id="document" class="form-control" 
-                                                               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx" required>
-                                                        <small class="text-muted">Max file size: 10MB</small>
-                                                    </div>
+                                            <div class="col-md-8">
+                                                <div class="form-group">
+                                                    <label for="description">Description/Notes</label>
+                                                    <input type="text" name="description" id="description" class="form-control" 
+                                                           placeholder="Brief description">
                                                 </div>
                                             </div>
+                                        </div>
 
-                                            <div class="form-group">
-                                                <button type="button" class="btn btn-success" id="uploadDocBtn">
-                                                    <i class="fa fa-upload"></i> Upload Document
-                                                </button>
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <div class="form-group">
+                                                    <label for="document_file">Select File <span class="text-danger">*</span></label>
+                                                    <input type="file" name="document_file" id="document_file" class="form-control" 
+                                                           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
+                                                    <small class="text-muted">Max size: 10MB</small>
+                                                </div>
                                             </div>
-                                        </form>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label>&nbsp;</label>
+                                                    <button type="submit" class="btn btn-success btn-block">
+                                                        <i class="fa fa-upload"></i> Upload Document
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <?php echo form_close(); ?>
                                     </div>
                                 </div>
 
+                                <!-- Documents Table -->
                                 <div class="panel panel-default">
                                     <div class="panel-heading">
                                         <h4 class="panel-title">
@@ -687,21 +686,18 @@
                                             <table class="table table-striped table-bordered">
                                                 <thead>
                                                     <tr>
-                                                        <th width="5%">#</th>
-                                                        <th width="20%">Document Type</th>
-                                                        <th width="25%">File Name</th>
-                                                        <th width="15%">Size</th>
-                                                        <th width="15%">Uploaded By</th>
-                                                        <th width="10%">Status</th>
-                                                        <th width="10%" class="text-center">Actions</th>
+                                                        <th>#</th>
+                                                        <th>Document Type</th>
+                                                        <th>File Name</th>
+                                                        <th>Size</th>
+                                                        <th>Uploaded By</th>
+                                                        <th>Date</th>
+                                                        <th>Status</th>
+                                                        <th>Actions</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody id="documentsTableBody">
-                                                    <tr>
-                                                        <td colspan="7" class="text-center text-muted">
-                                                            <i class="fa fa-spinner fa-spin"></i> Loading documents...
-                                                        </td>
-                                                    </tr>
+                                                <tbody id="documents-list">
+                                                    <!-- Documents will be loaded here -->
                                                 </tbody>
                                             </table>
                                         </div>
@@ -717,6 +713,7 @@
         </div>
     </div>
 </div>
+
 
 <div class="modal fade" id="categoryModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
@@ -768,6 +765,20 @@
                 $('#staff_email, #staff_firstname, #staff_lastname').prop('required', false);
                 $('#nodal_partner_manager_id').prop('required', true);
             }
+        });
+        
+        // Simple file size validation
+        $('#document_file').on('change', function() {
+            if (this.files[0] && this.files[0].size > 10485760) {
+                alert('File size exceeds 10MB limit');
+                this.value = '';
+            }
+        });
+        
+        // Direct form submission - no AJAX, no CSRF issues NOW FIXED
+        $('#simple-upload-form').on('submit', function() {
+            var btn = $(this).find('button[type="submit"]');
+            btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Uploading...');
         });
         
         $('form[action*="safelegalsolutions/branch"]').on('submit', function(e) {
@@ -854,114 +865,98 @@
         });
         
         <?php if (isset($branch)): ?>
-        var branchId = <?php echo $branch->id; ?>;
-
-        $('a[href="#tab_documents"]').on('shown.bs.tab', loadDocuments);
-        loadDocuments();
-
-        $('#uploadDocBtn').on('click', function() {
-            var btn = $(this);
-            var formData = new FormData($('#uploadDocumentForm')[0]);
-            
-            if (!$('#document_type').val()) {
-                alert('Please select document type');
-                return;
-            }
-            
-            if (!$('#document')[0].files[0]) {
-                alert('Please select a file');
-                return;
-            }
-            
-            if ($('#document')[0].files[0].size > 10485760) {
-                alert('File size exceeds 10MB');
-                return;
-            }
-            
-            btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Uploading...');
-            
-            $.ajax({
-                url: admin_url + 'safelegalsolutions/upload_partner_document',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                dataType: 'json',
-                success: function(r) {
-                    alert_float(r.success ? 'success' : 'danger', r.message);
-                    if (r.success) {
-                        $('#uploadDocumentForm')[0].reset();
-                        $('#document_type').selectpicker('refresh');
-                        loadDocuments();
-                    }
-                },
-                error: function() {
-                    alert_float('danger', 'Upload failed');
-                },
-                complete: function() {
-                    btn.prop('disabled', false).html('<i class="fa fa-upload"></i> Upload Document');
-                }
-            });
+        // Load documents when tab is clicked
+        $('a[href="#tab_documents"]').on('shown.bs.tab', function() {
+            loadDocuments();
         });
-
-        function loadDocuments() {
-            $.get(admin_url + 'safelegalsolutions/get_partner_documents_ajax/' + branchId, function(r) {
-                var tbody = $('#documentsTableBody');
-                tbody.empty();
-                
-                if (!r.success || !r.documents.length) {
-                    tbody.append('<tr><td colspan="7" class="text-center text-muted">No documents uploaded yet</td></tr>');
-                    $('#documents_count').text('0');
-                    return;
-                }
-                
-                $('#documents_count').text(r.documents.length);
-                
-                $.each(r.documents, function(i, d) {
-                    var badge = d.is_verified == 1 
-                        ? '<span class="label label-success"><i class="fa fa-check"></i> Verified</span>'
-                        : '<span class="label label-warning"><i class="fa fa-clock-o"></i> Pending</span>';
-                    
-                    tbody.append(
-                        '<tr>' +
-                        '<td>' + (i + 1) + '</td>' +
-                        '<td>' + d.document_type + '</td>' +
-                        '<td><i class="fa fa-file-o"></i> ' + d.file_name + (d.description ? '<br><small class="text-muted">' + d.description + '</small>' : '') + '</td>' +
-                        '<td>' + formatBytes(d.file_size) + '</td>' +
-                        '<td>' + d.uploaded_by_firstname + ' ' + d.uploaded_by_lastname + '<br><small>' + d.uploaded_at + '</small></td>' +
-                        '<td>' + badge + '</td>' +
-                        '<td class="text-center">' +
-                        '<a href="' + admin_url + 'safelegalsolutions/download_partner_document/' + d.id + '" class="btn btn-xs btn-info" title="Download"><i class="fa fa-download"></i></a> ' +
-                        (d.is_verified == 0 ? '<button class="btn btn-xs btn-success verify-doc" data-id="' + d.id + '" title="Verify"><i class="fa fa-check"></i></button> ' : '') +
-                        '<button class="btn btn-xs btn-danger delete-doc" data-id="' + d.id + '" title="Delete"><i class="fa fa-trash"></i></button>' +
-                        '</td>' +
-                        '</tr>'
-                    );
-                });
-            }, 'json');
+        
+        // Load documents on page load if documents tab is active
+        if ($('.tab-pane#tab_documents').hasClass('active')) {
+            loadDocuments();
         }
-
-        $(document).on('click', '.verify-doc', function() {
-            if (confirm('Mark this document as verified?')) {
-                $.post(admin_url + 'safelegalsolutions/verify_partner_document/' + $(this).data('id'), function(r) {
-                    alert_float(r.success ? 'success' : 'danger', r.message);
-                    if (r.success) loadDocuments();
-                }, 'json');
+        
+        function loadDocuments() {
+            $('#documents-list').html('<tr><td colspan="8" class="text-center"><i class="fa fa-spinner fa-spin"></i> Loading...</td></tr>');
+            
+            $.get(admin_url + 'safelegalsolutions/get_partner_documents_ajax/' + <?php echo $branch->id; ?>, function(response) {
+                var html = '';
+                if (response.success && response.documents && response.documents.length > 0) {
+                    $('#documents_count').text(response.documents.length);
+                    $.each(response.documents, function(i, doc) {
+                        var statusBadge = doc.is_verified == 1 
+                            ? '<span class="label label-success">Verified</span>'
+                            : '<span class="label label-warning">Pending</span>';
+                        
+                        var uploaderName = doc.uploaded_by_firstname ? 
+                            doc.uploaded_by_firstname + ' ' + doc.uploaded_by_lastname : 'Unknown';
+                        
+                        html += '<tr>';
+                        html += '<td>' + (i + 1) + '</td>';
+                        html += '<td>' + doc.document_type + '</td>';
+                        html += '<td>' + doc.file_name + '</td>';
+                        html += '<td>' + formatFileSize(doc.file_size) + '</td>';
+                        html += '<td>' + uploaderName + '</td>';
+                        html += '<td>' + doc.uploaded_at + '</td>';
+                        html += '<td>' + statusBadge + '</td>';
+                        html += '<td>';
+                        html += '<a href="' + admin_url + 'safelegalsolutions/download_partner_document/' + doc.id + '" class="btn btn-xs btn-info" title="Download"><i class="fa fa-download"></i></a> ';
+                        if (doc.is_verified == 0) {
+                            html += '<button onclick="verifyDocument(' + doc.id + ')" class="btn btn-xs btn-success" title="Verify"><i class="fa fa-check"></i></button> ';
+                        }
+                        html += '<button onclick="deleteDocument(' + doc.id + ')" class="btn btn-xs btn-danger" title="Delete"><i class="fa fa-trash"></i></button>';
+                        html += '</td>';
+                        html += '</tr>';
+                    });
+                } else {
+                    $('#documents_count').text('0');
+                    html = '<tr><td colspan="8" class="text-center text-muted">No documents uploaded yet</td></tr>';
+                }
+                $('#documents-list').html(html);
+            }, 'json').fail(function() {
+                $('#documents-list').html('<tr><td colspan="8" class="text-center text-danger">Failed to load documents</td></tr>');
+            });
+        }
+        
+        window.verifyDocument = function(id) {
+            if (confirm('Verify this document?')) {
+                $.post(admin_url + 'safelegalsolutions/verify_partner_document/' + id)
+                .done(function(response) {
+                    response = typeof response === 'string' ? JSON.parse(response) : response;
+                    if (response.success) {
+                        alert_float('success', response.message || 'Document verified');
+                        loadDocuments();
+                    } else {
+                        alert_float('danger', response.message || 'Failed to verify document');
+                    }
+                })
+                .fail(function() {
+                    alert_float('danger', 'Error verifying document');
+                });
             }
-        });
-
-        $(document).on('click', '.delete-doc', function() {
-            if (confirm('Delete this document? This cannot be undone.')) {
-                $.post(admin_url + 'safelegalsolutions/delete_partner_document/' + $(this).data('id'), function(r) {
-                    alert_float(r.success ? 'success' : 'danger', r.message);
-                    if (r.success) loadDocuments();
-                }, 'json');
+        };
+        
+        window.deleteDocument = function(id) {
+            if (confirm('Delete this document permanently?')) {
+                $.post(admin_url + 'safelegalsolutions/delete_partner_document/' + id)
+                .done(function(response) {
+                    response = typeof response === 'string' ? JSON.parse(response) : response;
+                    if (response.success) {
+                        alert_float('success', response.message || 'Document deleted');
+                        loadDocuments();
+                    } else {
+                        alert_float('danger', response.message || 'Failed to delete document');
+                    }
+                })
+                .fail(function() {
+                    alert_float('danger', 'Error deleting document');
+                });
             }
-        });
-
-        function formatBytes(bytes) {
+        };
+        
+        function formatFileSize(bytes) {
             if (bytes === 0) return '0 Bytes';
-            var k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            var k = 1024;
+            var sizes = ['Bytes', 'KB', 'MB', 'GB'];
             var i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }

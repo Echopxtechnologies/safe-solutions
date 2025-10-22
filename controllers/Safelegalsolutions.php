@@ -1830,82 +1830,72 @@ public function delete_change_request($request_id)
 
 
 // documents
-/**
- * Upload partner document (AJAX) - Store as LONGBLOB
- */
-public function upload_partner_document()
+public function upload_document($branch_id = '')
 {
-    // NO CSRF check needed - Perfex handles it automatically
-    
-    if (!is_sls_manager_or_admin()) {
-        echo json_encode(['success' => false, 'message' => 'Access denied']);
-        return;
+    if (!has_permission('safelegalsolutions', '', 'create')) {
+        access_denied('safelegalsolutions');
     }
-    
-    $branch_id = $this->input->post('branch_id');
-    $document_type = $this->input->post('document_type');
-    $description = $this->input->post('description');
-    
-    if (empty($branch_id)) {
-        echo json_encode(['success' => false, 'message' => 'Branch ID is required']);
-        return;
-    }
-    
-    // Check if file uploaded
-    if (empty($_FILES['document']['name'])) {
-        echo json_encode(['success' => false, 'message' => 'Please select a file']);
-        return;
-    }
-    
-    // Validate file
-    $allowed_types = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'xls', 'xlsx'];
-    $file_ext = pathinfo($_FILES['document']['name'], PATHINFO_EXTENSION);
-    
-    if (!in_array(strtolower($file_ext), $allowed_types)) {
-        echo json_encode(['success' => false, 'message' => 'File type not allowed. Allowed: PDF, DOC, DOCX, JPG, PNG, XLS, XLSX']);
-        return;
-    }
-    
-    // Max file size: 10MB
-    if ($_FILES['document']['size'] > 10485760) {
-        echo json_encode(['success' => false, 'message' => 'File size exceeds 10MB limit']);
-        return;
-    }
-    
-    // Read file as binary
-    $file_data = file_get_contents($_FILES['document']['tmp_name']);
-    
-    if ($file_data === false) {
-        echo json_encode(['success' => false, 'message' => 'Failed to read file']);
-        return;
-    }
-    
-    // Save to database as LONGBLOB
-    $doc_data = [
-        'branch_id' => $branch_id,
-        'file_name' => $_FILES['document']['name'],
-        'file_data' => $file_data, // Binary data
-        'file_size' => $_FILES['document']['size'],
-        'file_type' => $_FILES['document']['type'],
-        'document_type' => $document_type,
-        'description' => $description,
-        'uploaded_by' => get_staff_user_id(),
-        'uploaded_at' => date('Y-m-d H:i:s')
-    ];
-    
-    $insert_id = $this->safelegalsolutions_model->add_partner_document($doc_data);
-    
-    if ($insert_id) {
-        echo json_encode([
-            'success' => true,
-            'message' => 'Document uploaded successfully',
-            'document_id' => $insert_id
-        ]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Failed to save document']);
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Handle file upload directly to database
+        if (!empty($_FILES['document_file']['name'])) {
+            // Read file directly into memory
+            $file_tmp = $_FILES['document_file']['tmp_name'];
+            $file_data = file_get_contents($file_tmp);
+            
+            // Prepare data for database
+            $upload_data = [
+                'branch_id' => $branch_id,
+                'file_name' => $_FILES['document_file']['name'],
+                'file_data' => $file_data,
+                'file_size' => $_FILES['document_file']['size'],
+                'file_type' => $_FILES['document_file']['type'],
+                'document_type' => $this->input->post('document_type'),
+                'description' => $this->input->post('description'),
+                'uploaded_by' => get_staff_user_id(),
+                'uploaded_at' => date('Y-m-d H:i:s'),
+                'is_verified' => 0
+            ];
+            
+            $result = $this->safelegalsolutions_model->add_document($upload_data);
+            
+            if ($result) {
+                set_alert('success', 'Document uploaded successfully');
+            } else {
+                set_alert('danger', 'Failed to save document');
+            }
+        }
+        
+        redirect(admin_url('safelegalsolutions/branches'));
     }
 }
 
+public function download_document($document_id)
+{
+    if (!has_permission('safelegalsolutions', '', 'view')) {
+        access_denied('safelegalsolutions');
+    }
+    
+    // Get document from database
+    $document = $this->safelegalsolutions_model->get_document($document_id);
+    
+    if (!$document) {
+        set_alert('danger', 'Document not found');
+        redirect($_SERVER['HTTP_REFERER']);
+    }
+    
+    // Force download
+    header('Content-Type: ' . $document->file_type);
+    header('Content-Disposition: attachment; filename="' . $document->file_name . '"');
+    header('Content-Length: ' . strlen($document->file_data));
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    
+    // Output file data directly from database
+    echo $document->file_data;
+    exit;
+}
 /**
  * Get partner documents (AJAX)
  */
