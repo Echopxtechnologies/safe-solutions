@@ -281,6 +281,18 @@ try {
         `passport_expiry_date` DATE NULL COMMENT 'Passport expiry date',
         `unique_id` VARCHAR(50) NULL COMMENT 'Auto-generated unique ID (saflegxxx-333)',
         
+
+                -- Extended Personal Information (SECTION 1 EXTRA FIELDS)
+        `gender` ENUM('Male','Female','Other','Prefer not to say') NULL COMMENT 'Gender',
+        `nationality` VARCHAR(100) DEFAULT 'Indian' COMMENT 'Nationality',
+        `religion` VARCHAR(100) NULL COMMENT 'Religion',
+        `aadhar_number` VARCHAR(12) NULL COMMENT 'Aadhar Card Number',
+        `pan_number` VARCHAR(10) NULL COMMENT 'PAN Card Number',
+        `place_of_birth` VARCHAR(255) NULL COMMENT 'Place of Birth',
+        `languages_spoken` VARCHAR(255) NULL COMMENT 'Languages known',
+        `whatsapp_number` VARCHAR(20) NULL COMMENT 'WhatsApp contact',
+        `skype_teams_id` VARCHAR(100) NULL COMMENT 'Skype/Teams ID',
+        `address_line2` VARCHAR(255) NULL COMMENT 'Address Line 2',
         -- Package/Item Selection
         `item_id` INT(11) NULL COMMENT 'Selected package/item',
         
@@ -296,6 +308,95 @@ try {
         
         -- Emergency Contact
         `emergency_contact_mobile` VARCHAR(20) NULL COMMENT 'Emergency contact mobile',
+        -- Family/Guardian Information (SECTION 2)
+        `primary_contact_name` VARCHAR(255) NULL COMMENT 'Parent/Guardian Name',
+        `primary_contact_relationship` VARCHAR(50) NULL COMMENT 'Relationship',
+        `primary_contact_mobile` VARCHAR(20) NULL COMMENT 'Parent Mobile',
+        `primary_contact_email` VARCHAR(100) NULL COMMENT 'Parent Email',
+        `primary_contact_occupation` VARCHAR(100) NULL COMMENT 'Parent Occupation',
+        `primary_contact_annual_income` DECIMAL(12,2) NULL COMMENT 'Annual Income',
+
+        `secondary_contact_name` VARCHAR(255) NULL COMMENT 'Secondary Guardian Name',
+        `secondary_contact_relationship` VARCHAR(50) NULL COMMENT 'Relationship',
+        `secondary_contact_mobile` VARCHAR(20) NULL COMMENT 'Secondary Mobile',
+        `secondary_contact_email` VARCHAR(100) NULL COMMENT 'Secondary Email',
+        `secondary_contact_occupation` VARCHAR(100) NULL COMMENT 'Secondary Occupation',
+
+        `emergency_contact_name` VARCHAR(255) NULL COMMENT 'Emergency Contact Name',
+        `emergency_contact_relationship` VARCHAR(50) NULL COMMENT 'Emergency Relationship',
+        `emergency_contact_address` TEXT NULL COMMENT 'Emergency Contact Address',
+
+        -- Education & Academic Status (SECTION 3)
+        `highest_qualification` VARCHAR(255) NULL COMMENT 'Highest Qualification',
+        `institution_name` VARCHAR(255) NULL COMMENT 'Previous Institution',
+        `year_of_completion` INT(4) NULL COMMENT 'Year Completed',
+        `percentage_cgpa` VARCHAR(20) NULL COMMENT 'Marks/CGPA',
+
+        -- Study Abroad Visa Details (SECTION 3)
+        `city_destination` VARCHAR(100) NULL COMMENT 'Destination City',
+        `state_destination` VARCHAR(100) NULL COMMENT 'Destination State',
+        `course_duration` VARCHAR(50) NULL COMMENT 'Course Duration',
+        `start_date` DATE NULL COMMENT 'Course Start Date',
+        `expected_completion_date` DATE NULL COMMENT 'Expected Completion',
+        `student_id_number` VARCHAR(100) NULL COMMENT 'University Student ID',
+
+        `visa_type` VARCHAR(100) NULL COMMENT 'Visa Type',
+        `visa_number` VARCHAR(100) NULL COMMENT 'Visa Number',
+        `visa_issue_date` DATE NULL COMMENT 'Visa Issue Date',
+        `visa_expiry_date` DATE NULL COMMENT 'Visa Expiry Date',
+        `visa_status` ENUM('Applied','Pending','Approved','Rejected') NULL COMMENT 'Visa Status',
+
+        -- Accommodation Details (SECTION 4)
+        `accommodation_type` ENUM('University Housing','Private Rental','Homestay','Other') NULL COMMENT 'Accommodation Type',
+        `accommodation_address` TEXT NULL COMMENT 'Address Abroad',
+        `accommodation_city` VARCHAR(100) NULL COMMENT 'City Abroad',
+        `accommodation_state` VARCHAR(100) NULL COMMENT 'State/Province',
+        `accommodation_zip` VARCHAR(20) NULL COMMENT 'ZIP/Postal Code',
+        `accommodation_country` VARCHAR(100) NULL COMMENT 'Country',
+        `local_phone_number` VARCHAR(20) NULL COMMENT 'Local Phone',
+        `landlord_name` VARCHAR(255) NULL COMMENT 'Landlord/Contact Person',
+        `landlord_contact` VARCHAR(20) NULL COMMENT 'Landlord Contact',
+
+        `local_contact1_name` VARCHAR(255) NULL COMMENT 'Local Emergency Contact 1',
+        `local_contact1_relationship` VARCHAR(50) NULL COMMENT 'Relationship',
+        `local_contact1_phone` VARCHAR(20) NULL COMMENT 'Phone',
+        `local_contact1_email` VARCHAR(100) NULL COMMENT 'Email',
+
+        `local_contact2_name` VARCHAR(255) NULL COMMENT 'Local Emergency Contact 2',
+        `local_contact2_relationship` VARCHAR(50) NULL COMMENT 'Relationship',
+        `local_contact2_phone` VARCHAR(20) NULL COMMENT 'Phone',
+        `local_contact2_email` VARCHAR(100) NULL COMMENT 'Email',
+
+        -- Financial Information (SECTION 5)
+        `total_course_fee` DECIMAL(15,2) NULL COMMENT 'Total Course Fee',
+        `funding_source` VARCHAR(255) NULL COMMENT 'Funding Source (comma-separated)',
+
+        `loan_bank_name` VARCHAR(255) NULL COMMENT 'Education Loan Bank',
+        `loan_amount` DECIMAL(15,2) NULL COMMENT 'Loan Amount',
+        `loan_account_number` VARCHAR(100) NULL COMMENT 'Loan Account',
+        `loan_officer_contact` VARCHAR(100) NULL COMMENT 'Loan Officer Contact',
+
+        `health_insurance_provider` VARCHAR(255) NULL COMMENT 'Health Insurance Provider',
+        `health_insurance_policy` VARCHAR(100) NULL COMMENT 'Policy Number',
+        `health_insurance_coverage` DECIMAL(15,2) NULL COMMENT 'Coverage Amount',
+        `other_insurance` VARCHAR(255) NULL COMMENT 'Other Insurance',
+
+        -- Medical & Special Requirements (SECTION 6)
+        `blood_group` VARCHAR(10) NULL COMMENT 'Blood Group',
+        `allergies_medical_conditions` TEXT NULL COMMENT 'Allergies/Medical Conditions',
+        `regular_medications` TEXT NULL COMMENT 'Regular Medications',
+        `emergency_medical_contact` VARCHAR(100) NULL COMMENT 'Emergency Medical Contact',
+
+        `previous_legal_issues` TINYINT(1) DEFAULT 0 COMMENT 'Previous Legal Issues',
+        `legal_issues_details` TEXT NULL COMMENT 'Legal Issues Details',
+        `special_dietary_requirements` VARCHAR(255) NULL COMMENT 'Dietary Requirements',
+        `other_special_needs` TEXT NULL COMMENT 'Other Special Needs',
+
+        -- Referral & Partnership (SECTION 8)
+        `referral_source` VARCHAR(255) NULL COMMENT 'How they heard about us',
+        `referrer_name` VARCHAR(255) NULL COMMENT 'Referrer Name',
+        `referrer_organization` VARCHAR(255) NULL COMMENT 'Referrer Organization',
+        `referrer_contact` VARCHAR(100) NULL COMMENT 'Referrer Contact Details',
         
         -- Consent
         `consent_given` TINYINT(1) DEFAULT 0 COMMENT 'Data processing consent',

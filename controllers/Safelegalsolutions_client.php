@@ -1453,49 +1453,347 @@ public function validate_future_date($date)
         }
     }
     
-    public function my_profile()
-    {
-        try {
-            if (!is_client_logged_in()) {
-                redirect(site_url('authentication/login'));
-                return;
-            }
+  public function my_profile()
+{
+    try {
+        // Ensure client is logged in
+        if (!is_client_logged_in()) {
+            redirect('authentication/login');
+            return;
+        }
+        
+        $client_id = get_client_user_id();
+        
+        // Get student record linked to this client
+        $student = $this->safelegalsolutions_client_model->get_student_by_client_id($client_id);
+        
+        if (!$student) {
+            $this->_show_client_no_record('My Profile');
+            return;
+        }
+        
+        // Get the item/package details
+        $item = null;
+        if (!empty($student->item_id)) {
+            $item = $this->safelegalsolutions_client_model->get_item($student->item_id);
+        }
+        
+        // Get countries for destination dropdown
+        $countries = $this->_get_countries();
+        
+        // Prepare data for view
+        $data = [
+            'title'     => 'My Profile',
+            'student'   => $student,
+            'item'      => $item,
+            'countries' => $countries
+        ];
+        
+        // Use Perfex's standard client layout with EXISTING VIEW
+        $this->data($data);
+        $this->view('safelegalsolutions/client/my_profile');  // Uses your existing my_profile.php
+        $this->layout();
+        
+    } catch (Exception $e) {
+        log_activity($this->log_prefix . ' - My Profile Error: ' . $e->getMessage());
+        $this->_show_client_error(
+            'Profile Error',
+            'Failed to load your profile. Please try again or contact support.'
+        );
+    }
+}
+
+/**
+ * Update Profile - Handle form submission
+ * Validates, checks lock status, updates student record, recalculates profile completion
+ */
+public function update_profile()
+{
+    try {
+        // Ensure client is logged in
+        if (!is_client_logged_in()) {
+            set_alert('danger', 'You must be logged in to update your profile.');
+            redirect('authentication/login');
+            return;
+        }
+        
+        // Check if it's a POST request
+        if ($this->input->server('REQUEST_METHOD') !== 'POST') {
+            redirect('safelegalsolutions/safelegalsolutions_client/my_profile');
+            return;
+        }
+        
+        $client_id = get_client_user_id();
+        
+        // Get student record
+        $student = $this->safelegalsolutions_client_model->get_student_by_client_id($client_id);
+        
+        if (!$student) {
+            set_alert('danger', 'Student record not found.');
+            redirect('clients');
+            return;
+        }
+        
+        // CRITICAL: Check if profile is locked
+        if ($student->is_locked == 1) {
+            set_alert('danger', 'Your profile is locked and cannot be edited. Please contact support for assistance.');
+            redirect('safelegalsolutions/safelegalsolutions_client/my_profile');
+            return;
+        }
+        
+        // Validate form inputs
+        $validation_result = $this->_validate_profile_update();
+        
+        if (!$validation_result) {
+            // Validation failed, redirect back with errors
+            redirect('safelegalsolutions/safelegalsolutions_client/my_profile');
+            return;
+        }
+        
+        // Prepare update data (EXCLUDE email and payment fields)
+        $update_data = $this->_prepare_profile_update_data();
+        
+        // Update student record
+        $updated = $this->safelegalsolutions_client_model->update_student($student->id, $update_data);
+        
+        if ($updated) {
+            // Recalculate profile completion
+            $this->_recalculate_profile_completion($student->id);
             
-            $contact = $this->clients_model->get_contact(get_contact_user_id());
+            // Log activity
+            log_activity(sprintf(
+                'Student Profile Updated [ID: %d, Name: %s] by client [ID: %d]',
+                $student->id,
+                $student->student_name,
+                $client_id
+            ));
             
-            if (!$contact) {
-                show_404();
-                return;
-            }
-            
-            $student = $this->safelegalsolutions_client_model->get_student_by_client_id($contact->userid);
-            
-            if (!$student) {
-                $this->_show_client_no_record('My Profile');
-                return;
-            }
-            
-            $branch = $this->_get_branch_safe($student->branch_id);
-            $item = $this->_get_item_safe($student->item_id);
-            
-            $data = [
-                'title'   => 'My Profile',
-                'student' => $student,
-                'branch'  => $branch,
-                'item'    => $item
-            ];
-            
-            $this->data($data);
-            $this->view('safelegalsolutions/client/my_profile');
-            $this->layout();
-            
-        } catch (Exception $e) {
-            log_activity($this->log_prefix . ' - Profile Error: ' . $e->getMessage());
-            $this->_show_client_error('Profile Error', 
-                'Unable to load profile. Please try again or contact support.');
+            set_alert('success', 'Your profile has been updated successfully!');
+        } else {
+            set_alert('warning', 'No changes were made to your profile.');
+        }
+        
+        redirect('safelegalsolutions/safelegalsolutions_client/my_profile');
+        
+    } catch (Exception $e) {
+        log_activity($this->log_prefix . ' - Update Profile Error: ' . $e->getMessage());
+        set_alert('danger', 'An error occurred while updating your profile. Please try again.');
+        redirect('safelegalsolutions/safelegalsolutions_client/my_profile');
+    }
+}
+
+/**
+ * Validate Profile Update Form
+ * @return bool
+ */
+private function _validate_profile_update()
+{
+    try {
+        // Required fields validation
+        $this->form_validation->set_rules('student_name', 'Full Name', 'required|max_length[255]');
+        $this->form_validation->set_rules('phone', 'Phone Number', 'required|max_length[20]');
+        $this->form_validation->set_rules('date_of_birth', 'Date of Birth', 'required');
+        $this->form_validation->set_rules('address', 'Address', 'required');
+        $this->form_validation->set_rules('passport_number', 'Passport Number', 'required|max_length[50]');
+        
+        // Optional fields with validation
+        $this->form_validation->set_rules('whatsapp_number', 'WhatsApp Number', 'max_length[20]');
+        $this->form_validation->set_rules('skype_teams_id', 'Skype/Teams ID', 'max_length[100]');
+        $this->form_validation->set_rules('aadhar_number', 'Aadhar Number', 'max_length[20]');
+        $this->form_validation->set_rules('pan_number', 'PAN Number', 'max_length[20]');
+        
+        // Email validation (even though readonly, validate if submitted)
+        $this->form_validation->set_rules('email', 'Email', 'valid_email');
+        
+        if ($this->form_validation->run() === FALSE) {
+            return false;
+        }
+        
+        return true;
+        
+    } catch (Exception $e) {
+        log_activity($this->log_prefix . ' - Validation Error: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Prepare profile update data from POST
+ * EXCLUDES: email, payment fields, client_id, and other admin-only fields
+ * @return array
+ */
+private function _prepare_profile_update_data()
+{
+    $data = [];
+    
+    // ========== PERSONAL INFORMATION ==========
+    $data['student_name'] = $this->input->post('student_name', true);
+    $data['phone'] = $this->input->post('phone', true);
+    $data['whatsapp_number'] = $this->input->post('whatsapp_number', true);
+    $data['date_of_birth'] = $this->input->post('date_of_birth', true);
+    $data['gender'] = $this->input->post('gender', true);
+    $data['address'] = $this->input->post('address', true);
+    $data['address_line2'] = $this->input->post('address_line2', true);
+    $data['city'] = $this->input->post('city', true);
+    $data['state'] = $this->input->post('state', true);
+    $data['pin_code'] = $this->input->post('pin_code', true);
+    $data['nationality'] = $this->input->post('nationality', true);
+    $data['place_of_birth'] = $this->input->post('place_of_birth', true);
+    $data['religion'] = $this->input->post('religion', true);
+    $data['languages_spoken'] = $this->input->post('languages_spoken', true);
+    $data['skype_teams_id'] = $this->input->post('skype_teams_id', true);
+    
+    // ========== PASSPORT & ID ==========
+    $data['passport_number'] = strtoupper($this->input->post('passport_number', true));
+    $data['passport_expiry_date'] = $this->input->post('passport_expiry_date', true);
+    $data['aadhar_number'] = $this->input->post('aadhar_number', true);
+    $data['pan_number'] = strtoupper($this->input->post('pan_number', true));
+    
+    // ========== EMERGENCY CONTACTS ==========
+    // Primary Guardian
+    $data['primary_contact_name'] = $this->input->post('primary_contact_name', true);
+    $data['primary_contact_relationship'] = $this->input->post('primary_contact_relationship', true);
+    $data['primary_contact_mobile'] = $this->input->post('primary_contact_mobile', true);
+    $data['primary_contact_email'] = $this->input->post('primary_contact_email', true);
+    $data['primary_contact_occupation'] = $this->input->post('primary_contact_occupation', true);
+    $data['primary_contact_annual_income'] = $this->input->post('primary_contact_annual_income', true);
+    
+    // Secondary Guardian
+    $data['secondary_contact_name'] = $this->input->post('secondary_contact_name', true);
+    $data['secondary_contact_relationship'] = $this->input->post('secondary_contact_relationship', true);
+    $data['secondary_contact_mobile'] = $this->input->post('secondary_contact_mobile', true);
+    $data['secondary_contact_email'] = $this->input->post('secondary_contact_email', true);
+    $data['secondary_contact_occupation'] = $this->input->post('secondary_contact_occupation', true);
+    
+    // Emergency Contact
+    $data['emergency_contact_name'] = $this->input->post('emergency_contact_name', true);
+    $data['emergency_contact_relationship'] = $this->input->post('emergency_contact_relationship', true);
+    $data['emergency_contact_mobile'] = $this->input->post('emergency_contact_mobile', true);
+    $data['emergency_contact_address'] = $this->input->post('emergency_contact_address', true);
+    
+    // ========== EDUCATION BACKGROUND ==========
+    $data['highest_qualification'] = $this->input->post('highest_qualification', true);
+    $data['institution_name'] = $this->input->post('institution_name', true);
+    $data['year_of_completion'] = $this->input->post('year_of_completion', true);
+    $data['percentage_cgpa'] = $this->input->post('percentage_cgpa', true);
+    
+    // ========== DESTINATION DETAILS ==========
+    $data['destination_country_id'] = $this->input->post('destination_country_id', true);
+    $data['university_name'] = $this->input->post('university_name', true);
+    $data['course_program'] = $this->input->post('course_program', true);
+    $data['city_destination'] = $this->input->post('city_destination', true);
+    $data['state_destination'] = $this->input->post('state_destination', true);
+    $data['course_duration'] = $this->input->post('course_duration', true);
+    $data['start_date'] = $this->input->post('start_date', true);
+    $data['expected_completion_date'] = $this->input->post('expected_completion_date', true);
+    $data['student_id_number'] = $this->input->post('student_id_number', true);
+    
+    // ========== VISA INFORMATION ==========
+    $data['visa_type'] = $this->input->post('visa_type', true);
+    $data['visa_number'] = $this->input->post('visa_number', true);
+    $data['visa_issue_date'] = $this->input->post('visa_issue_date', true);
+    $data['visa_expiry_date'] = $this->input->post('visa_expiry_date', true);
+    $data['visa_status'] = $this->input->post('visa_status', true);
+    
+    // ========== ACCOMMODATION ==========
+    $data['accommodation_type'] = $this->input->post('accommodation_type', true);
+    $data['accommodation_address'] = $this->input->post('accommodation_address', true);
+    $data['accommodation_city'] = $this->input->post('accommodation_city', true);
+    $data['accommodation_state'] = $this->input->post('accommodation_state', true);
+    $data['accommodation_zip'] = $this->input->post('accommodation_zip', true);
+    $data['accommodation_country'] = $this->input->post('accommodation_country', true);
+    $data['local_phone_number'] = $this->input->post('local_phone_number', true);
+    $data['landlord_name'] = $this->input->post('landlord_name', true);
+    $data['landlord_contact'] = $this->input->post('landlord_contact', true);
+    
+    // Local Emergency Contacts
+    $data['local_contact1_name'] = $this->input->post('local_contact1_name', true);
+    $data['local_contact1_relationship'] = $this->input->post('local_contact1_relationship', true);
+    $data['local_contact1_phone'] = $this->input->post('local_contact1_phone', true);
+    $data['local_contact1_email'] = $this->input->post('local_contact1_email', true);
+    
+    $data['local_contact2_name'] = $this->input->post('local_contact2_name', true);
+    $data['local_contact2_relationship'] = $this->input->post('local_contact2_relationship', true);
+    $data['local_contact2_phone'] = $this->input->post('local_contact2_phone', true);
+    $data['local_contact2_email'] = $this->input->post('local_contact2_email', true);
+    
+    // ========== HEALTH & INSURANCE ==========
+    $data['health_insurance_provider'] = $this->input->post('health_insurance_provider', true);
+    $data['health_insurance_policy'] = $this->input->post('health_insurance_policy', true);
+    $data['health_insurance_coverage'] = $this->input->post('health_insurance_coverage', true);
+    $data['other_insurance'] = $this->input->post('other_insurance', true);
+    $data['blood_group'] = $this->input->post('blood_group', true);
+    $data['allergies_medical_conditions'] = $this->input->post('allergies_medical_conditions', true);
+    $data['regular_medications'] = $this->input->post('regular_medications', true);
+    $data['emergency_medical_contact'] = $this->input->post('emergency_medical_contact', true);
+    
+    // ========== ADDITIONAL INFORMATION ==========
+    $data['previous_legal_issues'] = $this->input->post('previous_legal_issues', true);
+    $data['legal_issues_details'] = $this->input->post('legal_issues_details', true);
+    $data['special_dietary_requirements'] = $this->input->post('special_dietary_requirements', true);
+    $data['other_special_needs'] = $this->input->post('other_special_needs', true);
+    
+    // Referral Information
+    $data['referral_source'] = $this->input->post('referral_source', true);
+    $data['referrer_name'] = $this->input->post('referrer_name', true);
+    $data['referrer_organization'] = $this->input->post('referrer_organization', true);
+    $data['referrer_contact'] = $this->input->post('referrer_contact', true);
+    
+    // Consent
+    $data['consent_given'] = $this->input->post('consent_given') ? 1 : 0;
+    if ($data['consent_given'] == 1 && empty($this->input->post('consent_given_at_original'))) {
+        $data['consent_given_at'] = date('Y-m-d H:i:s');
+    }
+    
+    // Clean up empty values
+    foreach ($data as $key => $value) {
+        if ($value === '' || $value === null) {
+            $data[$key] = null;
         }
     }
     
+    return $data;
+}
+
+/**
+ * Recalculate profile completion percentage
+ * @param int $student_id
+ */
+private function _recalculate_profile_completion($student_id)
+{
+    try {
+        // Get fresh student data
+        $student = $this->safelegalsolutions_client_model->get_student($student_id);
+        
+        if (!$student) {
+            return;
+        }
+        
+        // Convert student object to array for calculation
+        $student_data = (array) $student;
+        
+        // Calculate profile completion
+        $profile_completion = $this->safelegalsolutions_client_model->calculate_profile_completion($student_data);
+        
+        // Update profile completion in database
+        $this->safelegalsolutions_client_model->update_student($student_id, [
+            'profile_completion' => $profile_completion
+        ]);
+        
+        log_activity(sprintf(
+            'Profile completion recalculated for student [ID: %d]: %d%%',
+            $student_id,
+            $profile_completion
+        ));
+        
+    } catch (Exception $e) {
+        log_activity($this->log_prefix . ' - Recalculate Profile Completion Error: ' . $e->getMessage());
+    }
+}
+
+// ================================================================
+// END OF NEW METHODS TO ADD
+
     public function referral_card()
     {
         try {
