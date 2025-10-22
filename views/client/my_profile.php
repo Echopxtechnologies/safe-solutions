@@ -67,20 +67,7 @@
                                 Profile Completion: <strong><?php echo $student->profile_completion ?? 0; ?>%</strong>
                             </p>
                         </div>
-                        <div class="col-md-4 text-right">
-                            <div style="margin-top: 15px;">
-                                <div class="progress" style="height: 30px; margin-bottom: 10px;">
-                                    <div class="progress-bar progress-bar-<?php 
-                                        $completion = $student->profile_completion ?? 0;
-                                        echo $completion >= 80 ? 'success' : ($completion >= 50 ? 'warning' : 'danger'); 
-                                    ?>" 
-                                         role="progressbar" 
-                                         style="width: <?php echo $completion; ?>%; font-size: 16px; line-height: 30px;">
-                                        <?php echo $completion; ?>%
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        
                     </div>
                 </div>
             </div>
@@ -128,7 +115,7 @@
             </li>
             <li>
                 <a href="#tab_financial" data-toggle="tab" aria-expanded="false">
-                    <i class="fa fa-money"></i> Financial (View Only)
+                    <i class="fa fa-money"></i> Financial 
                 </a>
             </li>
             <li>
@@ -944,111 +931,103 @@
                 <hr>
                 
                 <div class="row">
-                    <div class="col-md-6">
-                        <table class="table table-bordered">
-                            <tbody>
-                                <tr>
-                                    <td style="width: 50%; font-weight: bold; background: #f8f9fa;">
-                                        <i class="fa fa-money"></i> Total Course Fee
-                                    </td>
-                                    <td>
-                                        <?php if(!empty($student->total_course_fee)): ?>
-                                            <strong>₹<?php echo number_format($student->total_course_fee, 2); ?></strong>
-                                        <?php else: ?>
-                                            <span class="text-muted">Not specified</span>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="font-weight: bold; background: #f8f9fa;">
-                                        <i class="fa fa-credit-card"></i> Funding Source
-                                    </td>
-                                    <td><?php echo !empty($student->funding_source) ? htmlspecialchars($student->funding_source) : '<span class="text-muted">Not specified</span>'; ?></td>
-                                </tr>
-                                <tr>
-                                    <td style="font-weight: bold; background: #f8f9fa;">
-                                        <i class="fa fa-university"></i> Loan Bank Name
-                                    </td>
-                                    <td><?php echo !empty($student->loan_bank_name) ? htmlspecialchars($student->loan_bank_name) : '<span class="text-muted">Not applicable</span>'; ?></td>
-                                </tr>
-                                <tr>
-                                    <td style="font-weight: bold; background: #f8f9fa;">
-                                        <i class="fa fa-rupee"></i> Loan Amount
-                                    </td>
-                                    <td>
-                                        <?php if(!empty($student->loan_amount)): ?>
-                                            ₹<?php echo number_format($student->loan_amount, 2); ?>
-                                        <?php else: ?>
-                                            <span class="text-muted">Not applicable</span>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <table class="table table-bordered">
-                            <tbody>
-                                <tr>
-                                    <td style="width: 50%; font-weight: bold; background: #f8f9fa;">
-                                        <i class="fa fa-credit-card"></i> Loan Account Number
-                                    </td>
-                                    <td><?php echo !empty($student->loan_account_number) ? htmlspecialchars($student->loan_account_number) : '<span class="text-muted">Not applicable</span>'; ?></td>
-                                </tr>
-                                <tr>
-                                    <td style="font-weight: bold; background: #f8f9fa;">
-                                        <i class="fa fa-phone"></i> Loan Officer Contact
-                                    </td>
-                                    <td><?php echo !empty($student->loan_officer_contact) ? htmlspecialchars($student->loan_officer_contact) : '<span class="text-muted">Not applicable</span>'; ?></td>
-                                </tr>
-                                <tr>
-                                    <td style="font-weight: bold; background: #f8f9fa;">
-                                        <i class="fa fa-check-circle"></i> Payment Status
-                                    </td>
-                                    <td>
-                                        <?php 
-                                        $payment_status_label = [
-                                            'paid' => '<span class="label label-success">Paid</span>',
-                                            'partial' => '<span class="label label-warning">Partial</span>',
-                                            'pending' => '<span class="label label-danger">Pending</span>',
-                                            'processing' => '<span class="label label-info">Processing</span>'
-                                        ];
-                                        echo $payment_status_label[$student->payment_status] ?? '<span class="label label-default">Unknown</span>';
-                                        ?>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="font-weight: bold; background: #f8f9fa;">
-                                        <i class="fa fa-percent"></i> Payment Progress
-                                    </td>
-                                    <td>
-                                        <div class="progress" style="margin-bottom: 0;">
-                                            <div class="progress-bar progress-bar-<?php 
-                                                $pmt_pct = $student->payment_percentage ?? 0;
-                                                echo $pmt_pct >= 80 ? 'success' : ($pmt_pct >= 50 ? 'warning' : 'danger'); 
-                                            ?>" 
-                                                 role="progressbar" 
-                                                 style="width: <?php echo $pmt_pct; ?>%">
-                                                <?php echo $pmt_pct; ?>%
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    <div class="col-md-6">
+        <div class="form-group">
+            <label>Total Course Fee</label>
+            <input type="number" name="total_course_fee" class="form-control" 
+                   placeholder="₹"
+                   value="<?php echo set_value('total_course_fee', $student->total_course_fee); ?>"
+                   <?php echo ($student->is_locked == 1) ? 'readonly' : ''; ?>>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="form-group">
+            <label>Funding Source</label>
+            <select name="funding_source" class="form-control selectpicker" 
+                    <?php echo ($student->is_locked == 1) ? 'disabled' : ''; ?>>
+                <option value="">-- Select Source --</option>
+                <option value="Self Funded" <?php echo ($student->funding_source == 'Self Funded') ? 'selected' : ''; ?>>Self Funded</option>
+                <option value="Education Loan" <?php echo ($student->funding_source == 'Education Loan') ? 'selected' : ''; ?>>Education Loan</option>
+                <option value="Scholarship" <?php echo ($student->funding_source == 'Scholarship') ? 'selected' : ''; ?>>Scholarship</option>
+                <option value="Sponsor" <?php echo ($student->funding_source == 'Sponsor') ? 'selected' : ''; ?>>Sponsor</option>
+                <option value="Other" <?php echo ($student->funding_source == 'Other') ? 'selected' : ''; ?>>Other</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label>Loan Bank Name</label>
+            <input type="text" name="loan_bank_name" class="form-control" 
+                   value="<?php echo set_value('loan_bank_name', $student->loan_bank_name); ?>"
+                   <?php echo ($student->is_locked == 1) ? 'readonly' : ''; ?>>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="form-group">
+            <label>Loan Amount</label>
+            <input type="number" name="loan_amount" class="form-control" 
+                   placeholder="₹"
+                   value="<?php echo set_value('loan_amount', $student->loan_amount); ?>"
+                   <?php echo ($student->is_locked == 1) ? 'readonly' : ''; ?>>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label>Loan Account Number</label>
+            <input type="text" name="loan_account_number" class="form-control" 
+                   value="<?php echo set_value('loan_account_number', $student->loan_account_number); ?>"
+                   <?php echo ($student->is_locked == 1) ? 'readonly' : ''; ?>>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="form-group">
+            <label>Loan Officer Contact</label>
+            <input type="text" name="loan_officer_contact" class="form-control" 
+                   placeholder="Phone or Email"
+                   value="<?php echo set_value('loan_officer_contact', $student->loan_officer_contact); ?>"
+                   <?php echo ($student->is_locked == 1) ? 'readonly' : ''; ?>>
+        </div>
+    </div>
+</div>
+
+<hr>
+
+<div class="row">
+    <div class="col-md-12">
+        <h5 class="bold">Payment Status (View Only)</h5>
+        <table class="table table-bordered">
+            <tbody>
+                <tr>
+                    <td style="width: 50%; font-weight: bold; background: #f8f9fa;">
+                        <i class="fa fa-check-circle"></i> Payment Status
+                    </td>
+                    <td>
+                        <?php 
+                        $payment_status_label = [
+                            'paid' => '<span class="label label-success">Paid</span>',
+                            'partial' => '<span class="label label-warning">Partial</span>',
+                            'pending' => '<span class="label label-danger">Pending</span>',
+                            'processing' => '<span class="label label-info">Processing</span>'
+                        ];
+                        echo $payment_status_label[$student->payment_status] ?? '<span class="label label-default">Unknown</span>';
+                        ?>
+                    </td>
+                </tr>
                 
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="alert alert-warning">
-                            <i class="fa fa-info-circle"></i> 
-                            To update financial information or make payments, please contact our finance department.
-                        </div>
+            </tbody>
+        </table>
+    </div>
+</div>
                     </div>
-                </div>
-            </div>
 
             <!-- TAB 9: HEALTH & INSURANCE -->
             <div class="tab-pane" id="tab_health">

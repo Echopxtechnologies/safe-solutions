@@ -1717,6 +1717,14 @@ private function _prepare_profile_update_data()
     $data['local_contact2_phone'] = $this->input->post('local_contact2_phone', true);
     $data['local_contact2_email'] = $this->input->post('local_contact2_email', true);
     
+
+    // ========== ✅ FINANCIAL INFORMATION (NOW EDITABLE) ==========
+    $data['total_course_fee'] = $this->input->post('total_course_fee', true);
+    $data['funding_source'] = $this->input->post('funding_source', true);
+    $data['loan_bank_name'] = $this->input->post('loan_bank_name', true);
+    $data['loan_amount'] = $this->input->post('loan_amount', true);
+    $data['loan_account_number'] = $this->input->post('loan_account_number', true);
+    $data['loan_officer_contact'] = $this->input->post('loan_officer_contact', true);
     // ========== HEALTH & INSURANCE ==========
     $data['health_insurance_provider'] = $this->input->post('health_insurance_provider', true);
     $data['health_insurance_policy'] = $this->input->post('health_insurance_policy', true);
