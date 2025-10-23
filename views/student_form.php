@@ -90,6 +90,12 @@
                                         <i class="fa fa-handshake-o"></i> Referral
                                     </a>
                                 </li>
+                                <li>
+                                    <a href="#tab_documents" data-toggle="tab" aria-expanded="false">
+                                        <i class="fa fa-files-o"></i> Documents
+                                        <span class="badge badge-danger" id="documents_count">0</span>
+                                    </a>
+                                </li>
                                 <?php endif; ?>
                             </ul>
                         </div>
@@ -1482,7 +1488,93 @@
                 </div>
                 <?php endif; ?>
             </div>
+            <?php echo form_close(); ?>
+<!-- TAB 12: DOCUMENTS -->
+<!-- TAB 12: DOCUMENTS -->
+<div class="tab-pane" id="tab_documents">
+    <!-- Upload New Document Section -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <i class="fa fa-upload"></i> Upload New Document
+                    </h4>
+                </div>
+                <div class="panel-body">
+                    <?php echo form_open_multipart(admin_url('safelegalsolutions/upload_student_document/' . $student->id), 
+                        ['id' => 'upload-document-form']); ?>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Document Type <span class="text-danger">*</span></label>
+                                <select name="document_type" class="form-control selectpicker" required>
+                                    <option value="">Select Type</option>
+                                    <option value="Passport">Passport</option>
+                                    <option value="Visa">Visa</option>
+                                    <option value="Academic Transcript">Academic Transcript</option>
+                                    <option value="Birth Certificate">Birth Certificate</option>
+                                    <option value="Bank Statement">Bank Statement</option>
+                                    <option value="Medical Certificate">Medical Certificate</option>
+                                    <option value="Police Clearance">Police Clearance</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Select File <span class="text-danger">*</span></label>
+                                <input type="file" name="document_file" class="form-control" required 
+                                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                                <small>Max size: 5MB. Formats: PDF, JPG, PNG, DOC, DOCX</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Remarks</label>
+                                <input type="text" name="remarks" class="form-control" 
+                                       placeholder="Optional remarks">
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa fa-upload"></i> Upload Document
+                    </button>
+                    <?php echo form_close(); ?>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- Documents List -->
+    <div class="row mtop20">
+        <div class="col-md-12">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Document Type</th>
+                            <th>File Name</th>
+                            <th>Size</th>
+                            <th>Uploaded By</th>
+                            <th>Upload Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-documents-list">
+                        <tr>
+                            <td colspan="8" class="text-center">
+                                <i class="fa fa-spinner fa-spin"></i> Loading documents...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
             <?php endif; ?>
                         </div>
                         <!-- END TAB CONTENT -->
@@ -1597,7 +1689,7 @@
                             <?php endif; ?>
                         </div>
 
-                        <?php echo form_close(); ?>
+
 
                     </div>
                 </div>
@@ -1609,293 +1701,410 @@
 <?php init_tail(); ?>
 
 <!-- Keep all existing JavaScript exactly as is -->
+
+
 <script>
-$(function() {
-    // Initialize selectpicker
-    if ($.fn.selectpicker) {
-        $('.selectpicker').selectpicker('refresh');
-    }
-
-    // Update price display when package is selected
-    $('#item_id').on('change', function() {
-        updatePriceDisplay();
-    });
-
-    // Calculate profile completion on form input
-    $('#candidate-form input, #candidate-form textarea, #candidate-form select').on('input change', function() {
-        calculateCompletion();
-    });
-
-    // Show/hide legal issues details based on checkbox
-    $('#previous_legal_issues').on('change', function() {
-        if ($(this).is(':checked')) {
-            $('#legal_issues_details_row').slideDown();
-        } else {
-            $('#legal_issues_details_row').slideUp();
-            $('#legal_issues_details').val('');
-        }
+$(document).ready(function() {
+    <?php if (isset($student) && !empty($student->id)): ?>
+    
+    // ============================================
+    // DOCUMENT MANAGEMENT SECTION - FIXED VERSION
+    // ============================================
+    
+    console.log('Student document system initializing for ID: <?php echo $student->id; ?>');
+    
+    // Load documents when Documents tab is clicked
+    $('a[href="#tab_documents"]').on('shown.bs.tab', function(e) {
+        console.log('Documents tab activated - loading documents...');
+        loadStudentDocuments();
     });
     
-    // Trigger on page load if editing
-    <?php if (isset($student)): ?>
-    if ($('#previous_legal_issues').is(':checked')) {
-        $('#legal_issues_details_row').show();
+    // Check if documents tab is already active on page load
+    setTimeout(function() {
+        if ($('.tab-pane#tab_documents').hasClass('active')) {
+            console.log('Documents tab is active on page load');
+            loadStudentDocuments();
+        }
+    }, 500);
+    
+    // Document upload form submission handler
+    $(document).on('submit', '#upload-document-form', function(e) {
+        e.preventDefault();
+        
+        var form = $(this);
+        var submitBtn = form.find('button[type="submit"]');
+        var formData = new FormData(this);
+        
+        // Ensure student_id is included
+        formData.append('student_id', '<?php echo $student->id; ?>');
+        
+        // Show loading state
+        submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Uploading...');
+        
+        $.ajax({
+            url: admin_url + 'safelegalsolutions/upload_student_document',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                console.log('Upload response:', response);
+                
+                // Parse response if it's a string
+                var result;
+                try {
+                    result = typeof response === 'string' ? JSON.parse(response) : response;
+                } catch(e) {
+                    result = { success: false, message: 'Invalid server response' };
+                }
+                
+                if (result.success) {
+                    alert_float('success', result.message || 'Document uploaded successfully');
+                    $('#upload-document-modal').modal('hide');
+                    form[0].reset();
+                    $('.selectpicker').selectpicker('refresh');
+                    loadStudentDocuments();
+                } else {
+                    alert_float('danger', result.message || 'Failed to upload document');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Upload error:', {
+                    status: xhr.status,
+                    error: error,
+                    response: xhr.responseText
+                });
+                
+                var errorMsg = 'Failed to upload document. ';
+                if (xhr.status === 413) {
+                    errorMsg = 'File too large. Maximum size is 10MB';
+                } else if (xhr.status === 500) {
+                    errorMsg = 'Server error. Please try again';
+                } else if (xhr.status === 403) {
+                    errorMsg = 'Access denied';
+                }
+                
+                alert_float('danger', errorMsg);
+            },
+            complete: function() {
+                submitBtn.prop('disabled', false).html('<i class="fa fa-upload"></i> Upload Document');
+            }
+        });
+        
+        return false;
+    });
+    
+    // Main function to load student documents
+    function loadStudentDocuments() {
+        console.log('Loading documents for student ID: <?php echo $student->id; ?>');
+        
+        // Show loading indicator
+        $('#student-documents-list').html(
+            '<tr><td colspan="8" class="text-center">' +
+            '<i class="fa fa-spinner fa-spin"></i> Loading documents...</td></tr>'
+        );
+        
+        // Make AJAX request
+        $.ajax({
+            url: admin_url + 'safelegalsolutions/get_student_documents_ajax/<?php echo $student->id; ?>',
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                console.log('Documents response received:', response);
+                
+                var html = '';
+                
+                // Check if we have documents
+                if (response && response.success && response.documents && Array.isArray(response.documents) && response.documents.length > 0) {
+                    // Update document count badge
+                    $('#documents_count').text(response.documents.length).removeClass('badge-secondary').addClass('badge-danger');
+                    
+                    // Build table rows for each document
+                    $.each(response.documents, function(index, doc) {
+                        // Prepare status badge
+                        var statusBadge = '';
+                        if (doc.is_verified == 1 || doc.is_verified == '1') {
+                            statusBadge = '<span class="label label-success">Verified</span>';
+                        } else {
+                            statusBadge = '<span class="label label-warning">Pending</span>';
+                        }
+                        
+                        // Prepare uploader name
+                        var uploaderName = 'System';
+                        if (doc.uploaded_by_name && doc.uploaded_by_name.trim() !== '') {
+                            uploaderName = doc.uploaded_by_name;
+                        } else if (doc.uploaded_by_firstname || doc.uploaded_by_lastname) {
+                            uploaderName = ((doc.uploaded_by_firstname || '') + ' ' + (doc.uploaded_by_lastname || '')).trim();
+                        }
+                        
+                        // Build table row
+                        html += '<tr>';
+                        html += '<td>' + (index + 1) + '</td>';
+                        html += '<td>' + escapeHtml(doc.document_type || 'General') + '</td>';
+                        html += '<td>' + escapeHtml(doc.file_name || 'Unknown') + '</td>';
+                        html += '<td>' + formatFileSize(parseInt(doc.file_size) || 0) + '</td>';
+                        html += '<td>' + escapeHtml(uploaderName) + '</td>';
+                        html += '<td>' + formatDate(doc.uploaded_at) + '</td>';
+                        html += '<td>' + statusBadge + '</td>';
+                        html += '<td class="text-nowrap">';
+                        
+                        // Download button
+                        html += '<a href="' + admin_url + 'safelegalsolutions/download_student_document/' + doc.id + '" ';
+                        html += 'class="btn btn-xs btn-info" title="Download" target="_blank">';
+                        html += '<i class="fa fa-download"></i></a> ';
+                        
+                        <?php if (is_sls_manager_or_admin()): ?>
+                        // Verify button (only if not verified)
+                        if (doc.is_verified != 1 && doc.is_verified != '1') {
+                            html += '<button type="button" onclick="verifyStudentDoc(' + doc.id + ')" ';
+                            html += 'class="btn btn-xs btn-success" title="Verify">';
+                            html += '<i class="fa fa-check"></i></button> ';
+                        }
+                        
+                        // Delete button
+                        html += '<button type="button" onclick="deleteStudentDoc(' + doc.id + ')" ';
+                        html += 'class="btn btn-xs btn-danger" title="Delete">';
+                        html += '<i class="fa fa-trash"></i></button>';
+                        <?php endif; ?>
+                        
+                        html += '</td>';
+                        html += '</tr>';
+                    });
+                } else {
+                    // No documents found
+                    $('#documents_count').text('0').removeClass('badge-danger').addClass('badge-secondary');
+                    html = '<tr><td colspan="8" class="text-center text-muted">' +
+                           '<i class="fa fa-folder-open-o"></i> No documents uploaded yet</td></tr>';
+                }
+                
+                // Update the table
+                $('#student-documents-list').html(html);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading documents:', {
+                    status: xhr.status,
+                    statusText: xhr.statusText,
+                    error: error,
+                    responseText: xhr.responseText
+                });
+                
+                $('#documents_count').text('0').removeClass('badge-danger').addClass('badge-secondary');
+                
+                var errorMessage = 'Failed to load documents';
+                if (xhr.status === 404) {
+                    errorMessage = 'Documents endpoint not found';
+                } else if (xhr.status === 403) {
+                    errorMessage = 'Access denied - insufficient permissions';
+                } else if (xhr.status === 500) {
+                    errorMessage = 'Server error - please refresh the page';
+                }
+                
+                $('#student-documents-list').html(
+                    '<tr><td colspan="8" class="text-center text-danger">' +
+                    '<i class="fa fa-exclamation-triangle"></i> ' + errorMessage + '</td></tr>'
+                );
+            }
+        });
     }
+    
+    // Global function to verify a document
+    window.verifyStudentDoc = function(docId) {
+        if (!confirm('Are you sure you want to verify this document?')) {
+            return;
+        }
+        
+        $.ajax({
+            url: admin_url + 'safelegalsolutions/verify_student_document/' + docId,
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                console.log('Verify response:', response);
+                
+                var result;
+                try {
+                    result = typeof response === 'string' ? JSON.parse(response) : response;
+                } catch(e) {
+                    result = { success: true, message: 'Document verified' };
+                }
+                
+                if (result.success) {
+                    alert_float('success', result.message || 'Document verified successfully');
+                    loadStudentDocuments();
+                } else {
+                    alert_float('danger', result.message || 'Failed to verify document');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Verify error:', error);
+                alert_float('danger', 'Error verifying document. Please try again.');
+            }
+        });
+    };
+    
+    // Global function to delete a document
+    window.deleteStudentDoc = function(docId) {
+        if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+            return;
+        }
+        
+        $.ajax({
+            url: admin_url + 'safelegalsolutions/delete_student_document/' + docId,
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                console.log('Delete response:', response);
+                
+                var result;
+                try {
+                    result = typeof response === 'string' ? JSON.parse(response) : response;
+                } catch(e) {
+                    result = { success: true, message: 'Document deleted' };
+                }
+                
+                if (result.success) {
+                    alert_float('success', result.message || 'Document deleted successfully');
+                    loadStudentDocuments();
+                } else {
+                    alert_float('danger', result.message || 'Failed to delete document');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Delete error:', error);
+                alert_float('danger', 'Error deleting document. Please try again.');
+            }
+        });
+    };
+    
+    // Helper function to format file size
+    function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '0 Bytes';
+        
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Helper function to format date
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return dateString;
+            
+            // Format as: Dec 25, 2024 10:30 AM
+            const options = { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            
+            return date.toLocaleDateString('en-US', options);
+        } catch(e) {
+            return dateString;
+        }
+    }
+    
+    // Helper function to escape HTML
+    function escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe
+            .toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+    
+    <?php else: ?>
+    
+    // Student not yet created - documents functionality disabled
+    console.log('New student form - documents functionality will be available after saving');
+    
     <?php endif; ?>
     
-    // Auto-uppercase PAN number
-    $('#pan_number').on('input', function() {
-        this.value = this.value.toUpperCase();
+    // ============================================
+    // OTHER FORM FUNCTIONALITY
+    // ============================================
+    
+    // Initialize date pickers
+    $('.datepicker').datepicker({
+        format: 'yyyy-mm-dd',
+        autoclose: true,
+        todayHighlight: true,
+        todayBtn: true,
+        clearBtn: true
     });
-
-    // Calculate initial completion and price if editing
-    <?php if (isset($student)): ?>
-    calculateCompletion();
-    updatePriceDisplay();
-    <?php endif; ?>
-});
-
-// Update price display based on selected package
-function updatePriceDisplay() {
-    var selectedOption = $('#item_id option:selected');
     
-    if (selectedOption.val()) {
-        var basePrice = parseFloat(selectedOption.data('base-price')) || 0;
-        var gst = parseFloat(selectedOption.data('gst')) || 0;
-        var total = parseFloat(selectedOption.data('total')) || 0;
-        
-        $('#display-base-price').text('₹' + basePrice.toFixed(2));
-        $('#display-gst').text('₹' + gst.toFixed(2));
-        $('#display-total').text('₹' + total.toFixed(2));
-        
-        // Highlight the price box
-        $('#price-details').css('border-color', '#28a745');
-        setTimeout(function() {
-            $('#price-details').css('border-color', '#e0e0e0');
-        }, 1000);
-    } else {
-        $('#display-base-price').text('₹0.00');
-        $('#display-gst').text('₹0.00');
-        $('#display-total').text('₹0.00');
-    }
-}
-
-// Calculate profile completion percentage
-function calculateCompletion() {
-    var requiredFields = [
-        'student_name',
-        'email',
-        'phone',
-        'address',
-        'city',
-        'state',
-        'pin_code',
-        'date_of_birth',
-        'passport_number',
-        'passport_expiry_date',
-        'emergency_contact_mobile',
-        'destination_country_id',
-        'university_name',
-        'course_program',
-        'item_id'
-    ];
+    // Initialize select pickers
+    $('.selectpicker').selectpicker('refresh');
     
-    var filled = 0;
-    
-    requiredFields.forEach(function(field) {
-        var value = $('#' + field).val();
-        if (value && value.trim() !== '') {
-            filled++;
+    // Handle country selection change
+    $('#destination_country_id').on('change', function() {
+        var countryId = $(this).val();
+        if (countryId) {
+            console.log('Country selected:', countryId);
+            // Add your country-specific logic here
         }
     });
     
-    var percentage = Math.round((filled / requiredFields.length) * 100);
-    
-    // Update progress bar if it exists
-    if ($('.progress-bar').length > 0) {
-        $('.progress-bar')
-            .css('width', percentage + '%')
-            .text(percentage + '%');
-        
-        // Change color based on completion
-        $('.progress-bar').removeClass('progress-bar-danger progress-bar-warning progress-bar-success');
-        if (percentage < 50) {
-            $('.progress-bar').addClass('progress-bar-danger');
-        } else if (percentage < 100) {
-            $('.progress-bar').addClass('progress-bar-warning');
-        } else {
-            $('.progress-bar').addClass('progress-bar-success');
+    // Phone number formatting and validation
+    $('input[type="tel"], #phone, #alternative_phone, #emergency_contact_mobile').on('input', function() {
+        var value = $(this).val().replace(/[^\d]/g, '');
+        if (value.length > 10) {
+            value = value.substring(0, 10);
         }
-    }
-}
-
-// Copy referral code to clipboard
-function copyReferralCode() {
-    var copyText = event.target.closest('.input-group').querySelector('input');
-    copyText.select();
-    copyText.setSelectionRange(0, 99999);
+        $(this).val(value);
+    });
     
-    try {
-        document.execCommand('copy');
-        alert('Referral code copied to clipboard!');
-    } catch (err) {
-        alert('Failed to copy referral code');
-    }
-}
-
-// Copy unique ID to clipboard
-function copyUniqueId() {
-    var uniqueId = '<?php echo isset($student) ? $student->unique_id : ""; ?>';
+    // Form validation before submit
+    $('#candidate-form').on('submit', function(e) {
+        var requiredFields = $(this).find('[required]');
+        var hasError = false;
+        
+        requiredFields.each(function() {
+            if (!$(this).val() || $(this).val().trim() === '') {
+                $(this).closest('.form-group').addClass('has-error');
+                hasError = true;
+            } else {
+                $(this).closest('.form-group').removeClass('has-error');
+            }
+        });
+        
+        if (hasError) {
+            alert_float('warning', 'Please fill in all required fields');
+            e.preventDefault();
+            return false;
+        }
+        
+        return true;
+    });
     
-    if (!uniqueId) {
-        alert('No unique ID available');
-        return;
-    }
+    // Clear validation errors on input
+    $('[required]').on('input change', function() {
+        $(this).closest('.form-group').removeClass('has-error');
+    });
     
-    // Create temporary input
-    var tempInput = document.createElement('input');
-    tempInput.value = uniqueId;
-    document.body.appendChild(tempInput);
-    tempInput.select();
+    // Handle tab navigation warnings for unsaved changes
+    var formChanged = false;
+    $('#candidate-form :input').on('change', function() {
+        formChanged = true;
+    });
     
-    try {
-        document.execCommand('copy');
-        alert('Unique ID copied: ' + uniqueId);
-    } catch (err) {
-        alert('Failed to copy unique ID');
-    }
+    window.addEventListener('beforeunload', function(e) {
+        if (formChanged) {
+            e.preventDefault();
+            e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        }
+    });
     
-    document.body.removeChild(tempInput);
-}
-
-// Auto-uppercase passport number
-$('#passport_number').on('input', function() {
-    this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-});
-
-// Form validation
-$('#candidate-form').on('submit', function(e) {
-    // Validate package selection
-    if (!$('#item_id').val()) {
-        alert('Please select a package');
-        $('#item_id').focus();
-        $('.selectpicker').selectpicker('toggle');
-        return false;
-    }
-    
-    // Validate email format
-    var email = $('#email').val();
-    var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        alert('Please enter a valid email address');
-        $('#email').focus();
-        return false;
-    }
-    
-    // Validate phone format (basic)
-    var phone = $('#phone').val();
-    if (phone.replace(/[^0-9]/g, '').length < 10) {
-        alert('Please enter a valid 10-digit phone number');
-        $('#phone').focus();
-        return false;
-    }
-    
-    // Validate passport number
-    var passport = $('#passport_number').val();
-    if (!passport || passport.trim() === '') {
-        alert('Please enter passport number');
-        $('#passport_number').focus();
-        return false;
-    }
-    if (passport.length < 6) {
-        alert('Please enter a valid passport number (minimum 6 characters)');
-        $('#passport_number').focus();
-        return false;
-    }
-    
-    // Validate age (must be 18+)
-    var dob = new Date($('#date_of_birth').val());
-    var today = new Date();
-    var age = today.getFullYear() - dob.getFullYear();
-    var monthDiff = today.getMonth() - dob.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-        age--;
-    }
-    
-    if (age < 18) {
-        alert('Candidate must be at least 18 years old');
-        $('#date_of_birth').focus();
-        return false;
-    }
-    
-    // Validate passport expiry date
-    var expiryDate = new Date($('#passport_expiry_date').val());
-    if (expiryDate <= today) {
-        alert('Passport expiry date must be in the future');
-        $('#passport_expiry_date').focus();
-        return false;
-    }
-    
-    // Validate destination country
-    if (!$('#destination_country_id').val()) {
-        alert('Please select destination country');
-        $('#destination_country_id').focus();
-        $('.selectpicker').selectpicker('toggle');
-        return false;
-    }
-    
-    // Validate university name
-    if (!$('#university_name').val().trim()) {
-        alert('Please enter university/institution name');
-        $('#university_name').focus();
-        return false;
-    }
-    
-    // Validate course/program
-    if (!$('#course_program').val().trim()) {
-        alert('Please enter course/program');
-        $('#course_program').focus();
-        return false;
-    }
-    
-    // Validate city
-    if (!$('#city').val().trim()) {
-        alert('Please enter city');
-        $('#city').focus();
-        return false;
-    }
-    
-    // Validate state
-    if (!$('#state').val().trim()) {
-        alert('Please enter state');
-        $('#state').focus();
-        return false;
-    }
-    
-    // Validate PIN code
-    var pin = $('#pin_code').val();
-    if (!pin || pin.trim() === '' || pin.length < 5) {
-        alert('Please enter a valid PIN code (minimum 5 digits)');
-        $('#pin_code').focus();
-        return false;
-    }
-    
-    // Validate emergency contact
-    var emergency = $('#emergency_contact_mobile').val();
-    var emergencyDigits = emergency.replace(/[^0-9]/g, '');
-    if (emergencyDigits.length < 10) {
-        alert('Please enter a valid emergency contact mobile number');
-        $('#emergency_contact_mobile').focus();
-        return false;
-    }
-    
-    // Validate consent checkbox
-    if (!$('#consent_given').is(':checked')) {
-        alert('You must consent to data processing to proceed');
-        $('#consent_given').focus();
-        return false;
-    }
-    
-    return true;
+    $('#candidate-form').on('submit', function() {
+        formChanged = false;
+    });
 });
 </script>

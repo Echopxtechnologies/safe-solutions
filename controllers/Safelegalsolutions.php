@@ -1978,4 +1978,159 @@ public function verify_partner_document($id)
         echo json_encode(['success' => false, 'message' => 'Failed to verify document']);
     }
 }
+
+
+// document uplaod studnet side
+/**
+ * Upload student document
+ */
+public function upload_student_document($student_id)
+{
+    if (!is_sls_manager_or_admin()) {
+        set_alert('danger', 'Access denied');
+        redirect(admin_url('safelegalsolutions/students'));
+        return;
+    }
+    
+    $this->safelegalsolutions_model->upload_student_document($student_id);
+    redirect(admin_url('safelegalsolutions/students/' . $student_id . '?group=documents'));
+}
+
+/**
+ * Get student documents (AJAX)
+ */
+/**
+ * Get student documents (AJAX)
+ */
+public function get_student_documents_ajax($student_id)
+{
+    // Set JSON header immediately
+    header('Content-Type: application/json');
+    
+    // Initialize response array
+    $response = [
+        'success' => false,
+        'documents' => [],
+        'message' => ''
+    ];
+    
+    try {
+        // Check permission
+        if (!is_sls_manager_or_admin() && !is_npm()) {
+            $response['message'] = 'Access denied';
+            echo json_encode($response);
+            exit;
+        }
+        
+        // Validate student_id
+        if (!$student_id || !is_numeric($student_id)) {
+            $response['message'] = 'Invalid student ID';
+            echo json_encode($response);
+            exit;
+        }
+        
+        // Get documents from model
+        $documents = $this->safelegalsolutions_model->get_student_documents($student_id);
+        
+        // Ensure documents is always an array
+        if (!is_array($documents)) {
+            $documents = [];
+        }
+        
+        // Format documents for frontend
+        $formatted_documents = [];
+        foreach ($documents as $doc) {
+            $formatted_documents[] = [
+                'id' => $doc->id,
+                'student_id' => $doc->student_id,
+                'file_name' => $doc->file_name,
+                'file_size' => $doc->file_size,
+                'file_type' => $doc->file_type,
+                'document_type' => $doc->document_type ?: 'Other',
+                'description' => $doc->description ?: '',
+                'uploaded_by' => $doc->uploaded_by,
+                'uploaded_by_name' => $doc->uploaded_by_name ?: 'Unknown',
+                'uploaded_at' => $doc->uploaded_at,
+                'is_verified' => $doc->is_verified,
+                'verified_by' => $doc->verified_by,
+                'verified_at' => $doc->verified_at
+            ];
+        }
+        
+        $response['success'] = true;
+        $response['documents'] = $formatted_documents;
+        $response['message'] = count($formatted_documents) . ' document(s) found';
+        
+    } catch (Exception $e) {
+        $response['message'] = 'Error: ' . $e->getMessage();
+        log_message('error', 'Student documents AJAX error: ' . $e->getMessage());
+    }
+    
+    // Output JSON and exit
+    echo json_encode($response);
+    exit;
+}
+
+/**
+ * Download student document
+ */
+public function download_student_document($id)
+{
+    if (!is_sls_manager_or_admin()) {
+        access_denied('safelegalsolutions');
+    }
+    
+    $doc = $this->safelegalsolutions_model->get_student_document($id);
+    
+    if (!$doc) {
+        show_404();
+    }
+    
+    header('Content-Type: ' . $doc->file_type);
+    header('Content-Disposition: attachment; filename="' . $doc->file_name . '"');
+    header('Content-Length: ' . $doc->file_size);
+    header('Cache-Control: private, max-age=0, must-revalidate');
+    header('Pragma: public');
+    
+    echo $doc->file_data;
+    exit;
+}
+
+/**
+ * Delete student document (AJAX)
+ */
+public function delete_student_document($id)
+{
+    if (!is_sls_manager_or_admin()) {
+        echo json_encode(['success' => false, 'message' => 'Access denied']);
+        return;
+    }
+    
+    $success = $this->safelegalsolutions_model->delete_student_document($id);
+    
+    if ($success) {
+        echo json_encode(['success' => true, 'message' => 'Document deleted successfully']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to delete document']);
+    }
+}
+
+/**
+ * Verify student document (AJAX)
+ */
+public function verify_student_document($id)
+{
+    if (!is_sls_manager_or_admin()) {
+        echo json_encode(['success' => false, 'message' => 'Access denied']);
+        return;
+    }
+    
+    $success = $this->safelegalsolutions_model->verify_student_document($id, get_staff_user_id());
+    
+    if ($success) {
+        echo json_encode(['success' => true, 'message' => 'Document verified successfully']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to verify document']);
+    }
+}
 }

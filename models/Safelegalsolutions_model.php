@@ -2384,4 +2384,133 @@ public function verify_partner_document($id, $staff_id)
     return false;
 }
 
+// student side upload docuemtn 
+/**
+ * Upload student document
+ */
+public function upload_student_document($student_id)
+{
+    // DEBUG: Log all POST data
+    log_message('debug', 'POST data received: ' . print_r($_POST, true));
+    log_message('debug', 'FILES data received: ' . print_r($_FILES, true));
+    
+    // Check if file was uploaded
+    if (!isset($_FILES['document_file']) || $_FILES['document_file']['error'] != 0) {
+        set_alert('danger', 'File upload failed. Please try again.');
+        return false;
+    }
+    
+    $file = $_FILES['document_file'];
+    
+    // Validate file type
+    $allowed_types = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    
+    if (!in_array($ext, $allowed_types)) {
+        set_alert('danger', 'Invalid file type. Allowed: PDF, DOC, DOCX, JPG, PNG');
+        return false;
+    }
+    
+    // Validate file size (10MB max)
+    if ($file['size'] > 10485760) {
+        set_alert('danger', 'File size exceeds 10MB limit');
+        return false;
+    }
+    
+    // Read file content as binary
+    $file_data = file_get_contents($file['tmp_name']);
+    
+    // DEBUG: Check what document_type value we're getting
+    $document_type_value = $this->input->post('document_type');
+    log_message('debug', 'Document type value: ' . var_export($document_type_value, true));
+    
+    // FIX: Handle NULL or empty document_type
+    if (empty($document_type_value)) {
+        $document_type_value = 'Other'; // Default value if not provided
+        log_message('warning', 'Document type was empty, using default: Other');
+    }
+    
+    // Prepare data for insertion with proper escaping
+    $data = [
+        'student_id' => (int)$student_id,
+        'file_name' => $file['name'],
+        'file_data' => $file_data,
+        'file_size' => (int)$file['size'],
+        'file_type' => $file['type'] ?: NULL,
+        'document_type' => $document_type_value ?: NULL,
+        'description' => $this->input->post('description') ?: NULL,
+        'uploaded_by' => (int)get_staff_user_id(),
+        'uploaded_at' => date('Y-m-d H:i:s')
+    ];
+    
+    // DEBUG: Log the data array before insert
+    log_message('debug', 'Data prepared for insert: ' . print_r($data, true));
+    
+    // DEBUG: Check table name
+    $table_name = db_prefix() . 'sls_student_documents';
+    log_message('debug', 'Table name: ' . $table_name);
+    
+    // TRY-CATCH for better error handling
+    try {
+        if ($this->db->insert($table_name, $data)) {
+            set_alert('success', 'Document uploaded successfully');
+            
+            // Log activity
+            if (function_exists('log_activity')) {
+                log_activity('Student Document Uploaded [Student ID: ' . $student_id . ', File: ' . $file['name'] . ']');
+            }
+            
+            return true;
+        } else {
+            // Get the actual database error
+            $error = $this->db->error();
+            log_message('error', 'Database insert failed: ' . print_r($error, true));
+            set_alert('danger', 'Database error: ' . $error['message']);
+            return false;
+        }
+    } catch (Exception $e) {
+        log_message('error', 'Exception during insert: ' . $e->getMessage());
+        set_alert('danger', 'Failed to upload: ' . $e->getMessage());
+        return false;
+    }
+}
+
+public function get_student_documents($student_id)
+{
+    $this->db->select('d.*, CONCAT(s.firstname, " ", s.lastname) as uploaded_by_name');
+    $this->db->from(db_prefix() . 'sls_student_documents d');
+    $this->db->join(db_prefix() . 'staff s', 's.staffid = d.uploaded_by', 'left');
+    $this->db->where('d.student_id', $student_id);
+    $this->db->order_by('d.uploaded_at', 'DESC');
+    
+    return $this->db->get()->result();
+}
+
+public function get_student_document($id, $student_id = null)
+{
+    $this->db->where('id', $id);
+    
+    if ($student_id) {
+        $this->db->where('student_id', $student_id);
+    }
+    
+    return $this->db->get(db_prefix() . 'sls_student_documents')->row();
+}
+
+public function delete_student_document($id)
+{
+    return $this->db->delete(db_prefix() . 'sls_student_documents', ['id' => $id]);
+}
+
+public function verify_student_document($id, $staff_id)
+{
+    $data = [
+        'is_verified' => 1,
+        'verified_by' => $staff_id,
+        'verified_at' => date('Y-m-d H:i:s')
+    ];
+    
+    return $this->db->update(db_prefix() . 'sls_student_documents', $data, ['id' => $id]);
+}
+
 }

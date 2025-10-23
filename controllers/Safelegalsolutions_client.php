@@ -2182,4 +2182,52 @@ private function _recalculate_profile_completion($student_id)
             return [];
         }
     }
+
+
+// docuemnt uplaod 
+/**
+ * Get my documents (AJAX) - For clients
+ */
+public function get_my_documents_ajax()
+{
+    $student = $this->safelegalsolutions_client_model->get_student_by_client(get_client_user_id());
+    
+    if (!$student) {
+        echo json_encode(['success' => false, 'message' => 'Student profile not found']);
+        return;
+    }
+    
+    $documents = $this->safelegalsolutions_client_model->get_student_documents($student->id);
+    
+    echo json_encode([
+        'success' => true,
+        'documents' => $documents
+    ]);
+}
+
+/**
+ * Download my document - For clients
+ */
+public function download_my_document($id)
+{
+    $student = $this->safelegalsolutions_client_model->get_student_by_client(get_client_user_id());
+    
+    if (!$student) {
+        access_denied('Documents');
+    }
+    
+    // Verify document belongs to this student
+    $doc = $this->safelegalsolutions_client_model->get_student_document($id, $student->id);
+    
+    if (!$doc) {
+        show_404();
+    }
+    
+    header('Content-Type: ' . $doc->file_type);
+    header('Content-Disposition: attachment; filename="' . $doc->file_name . '"');
+    header('Content-Length: ' . $doc->file_size);
+    
+    echo $doc->file_data;
+    exit;
+}
 }

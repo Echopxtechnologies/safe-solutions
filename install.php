@@ -256,6 +256,46 @@ try {
     die('Failed to create table: ' . $table5 . ' - Error: ' . $e->getMessage());
 }
 
+// ==================== TABLE 3.5: STUDENT DOCUMENTS (LONGBLOB STORAGE) ====================
+$table_student_docs = $db_prefix . 'sls_student_documents';
+log_message('info', 'Creating table: ' . $table_student_docs);
+
+try {
+    $CI->db->query("DROP TABLE IF EXISTS `{$table_student_docs}`");
+    
+    // FIXED: Using the actual table name instead of variable
+    $students_table = $db_prefix . 'sls_students';
+    
+    $sql_student_docs = "CREATE TABLE `{$table_student_docs}` (
+        `id` INT(11) NOT NULL AUTO_INCREMENT,
+        `student_id` INT(11) NOT NULL COMMENT 'FK to sls_students',
+        `file_name` VARCHAR(255) NOT NULL COMMENT 'Original file name',
+        `file_data` LONGBLOB NOT NULL COMMENT 'Binary file data',
+        `file_size` INT(11) NOT NULL DEFAULT 0 COMMENT 'File size in bytes',
+        `file_type` VARCHAR(50) NULL COMMENT 'MIME type',
+        `document_type` VARCHAR(100) NULL COMMENT 'Category: Passport, Visa, Academic, etc.',
+        `description` TEXT NULL COMMENT 'Document description/notes',
+        `uploaded_by` INT(11) NOT NULL COMMENT 'Staff who uploaded',
+        `uploaded_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        `is_verified` TINYINT(1) DEFAULT 0 COMMENT 'Admin/Manager verification status',
+        `verified_by` INT(11) NULL,
+        `verified_at` DATETIME NULL,
+        PRIMARY KEY (`id`),
+        KEY `student_id` (`student_id`),
+        KEY `uploaded_by` (`uploaded_by`),
+        KEY `is_verified` (`is_verified`),
+        CONSTRAINT `fk_student_docs_student` 
+            FOREIGN KEY (`student_id`) 
+            REFERENCES `{$students_table}` (`id`) 
+            ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    
+    $CI->db->query($sql_student_docs);
+    log_message('info', 'SUCCESS: Table ' . $table_student_docs . ' created with LONGBLOB storage');
+} catch (Exception $e) {
+    log_message('error', 'ERROR creating ' . $table_student_docs . ': ' . $e->getMessage());
+    die('Failed to create table: ' . $table_student_docs . ' - Error: ' . $e->getMessage());
+}
 // ==================== TABLE 4: STUDENTS (CLEANED - REMOVED REDUNDANT PAYMENT FIELDS) ====================
 $table3 = $db_prefix . 'sls_students';
 log_message('info', 'Creating table: ' . $table3);

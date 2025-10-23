@@ -128,6 +128,11 @@
                     <i class="fa fa-info-circle"></i> Additional Info
                 </a>
             </li>
+            <li>
+                <a href="#tab_documents" data-toggle="tab" aria-expanded="false">
+                    <i class="fa fa-files-o"></i> My Documents
+                </a>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -1229,8 +1234,41 @@
                         </div>
                     </div>
                 </div>
-                
+                <!-- Documents Tab -->
+<div class="tab-pane" id="tab_documents">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h4 class="panel-title">
+                <i class="fa fa-files-o"></i> My Documents
+            </h4>
+        </div>
+        <div class="panel-body">
+            <div class="alert alert-info">
+                <i class="fa fa-info-circle"></i> These documents have been uploaded by your administrator. You can view and download them for your reference.
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Document Type</th>
+                            <th>File Name</th>
+                            <th>Uploaded Date</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="my-documents-list">
+                        <!-- Documents loaded via AJAX -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
                 <hr>
+                
                 
                 <div class="row">
                     <div class="col-md-12">
@@ -1331,6 +1369,42 @@ $(document).ready(function() {
     $('#student_profile_form').on('submit', function() {
         formChanged = false;
     });
+});
+
+$(document).ready(function() {
+    $('a[href="#tab_documents"]').on('shown.bs.tab', function() {
+        loadMyDocuments();
+    });
+    
+    function loadMyDocuments() {
+        $('#my-documents-list').html('<tr><td colspan="6" class="text-center"><i class="fa fa-spinner fa-spin"></i> Loading...</td></tr>');
+        
+        $.get(site_url + 'safelegalsolutions/safelegalsolutions_client/get_my_documents_ajax', function(response) {
+            var html = '';
+            if (response.success && response.documents && response.documents.length > 0) {
+                $.each(response.documents, function(i, doc) {
+                    var statusBadge = doc.is_verified == 1 
+                        ? '<span class="label label-success">Verified</span>'
+                        : '<span class="label label-warning">Pending Verification</span>';
+                    
+                    html += '<tr>';
+                    html += '<td>' + (i + 1) + '</td>';
+                    html += '<td>' + doc.document_type + '</td>';
+                    html += '<td>' + doc.file_name + '</td>';
+                    html += '<td>' + doc.uploaded_at + '</td>';
+                    html += '<td>' + statusBadge + '</td>';
+                    html += '<td>';
+                    html += '<a href="' + site_url + 'safelegalsolutions/safelegalsolutions_client/download_my_document/' + doc.id + '" class="btn btn-sm btn-info">';
+                    html += '<i class="fa fa-download"></i> Download</a>';
+                    html += '</td>';
+                    html += '</tr>';
+                });
+            } else {
+                html = '<tr><td colspan="6" class="text-center text-muted">No documents available</td></tr>';
+            }
+            $('#my-documents-list').html(html);
+        }, 'json');
+    }
 });
 </script>
 
