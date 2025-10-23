@@ -20,7 +20,9 @@ class Safelegalsolutions_client extends ClientsController
     // CLASS PROPERTIES
     // ================================================================
     
-    private $public_methods = ['index', 'register', 'review', 'success', 'purchase', 'payment_success', 'payment_failure'];
+    private $public_methods = ['index', 'register', 'review', 'success', 'purchase', 'payment_success', 'payment_failure','get_client_documents_ajax',    // ADD THIS'upload_client_document',       // ADD THIS  
+    'delete_client_document',        // ADD THIS
+    'download_client_document' ];
     private $log_prefix = 'SafeLegalSolutions Client Controller';
 
     // ================================================================
@@ -2184,43 +2186,145 @@ private function _recalculate_profile_completion($student_id)
     }
 
 
-// docuemnt uplaod 
-/**
- * Get my documents (AJAX) - For clients
- */
-public function get_my_documents_ajax()
-{
-    $student = $this->safelegalsolutions_client_model->get_student_by_client(get_client_user_id());
     
-    if (!$student) {
-        echo json_encode(['success' => false, 'message' => 'Student profile not found']);
-        return;
+
+
+
+/**
+ * Get client's own documents (AJAX)
+ */
+/**
+ * Get client's own documents (AJAX)
+ */
+public function get_client_documents_ajax($student_id = null)
+{
+    header('Content-Type: application/json');
+    
+    $response = [
+        'success' => false,
+        'documents' => [],
+        'message' => ''
+    ];
+    
+    try {
+        // Get student ID from session - CHECK YOUR SESSION VARIABLE NAME
+        // It might be one of these:
+        
+        if (!$student_id) {
+            $response['message'] = 'Session expired. Please login again.';
+            $response['debug'] = 'No student ID in session. Session data: ' . json_encode($this->session->userdata());
+            echo json_encode($response);
+            exit;
+        }
+        
+        // Get documents from model
+        $this->load->model('safelegalsolutions_client_model');
+        $documents = $this->safelegalsolutions_client_model->get_student_documents($student_id);
+        
+        if (!is_array($documents)) {
+            $documents = [];
+        }
+        
+        $formatted_documents = [];
+        foreach ($documents as $doc) {
+            $formatted_documents[] = [
+                'id' => $doc->id,
+                'student_id' => $doc->student_id,
+                'file_name' => $doc->file_name,
+                'file_size' => $doc->file_size,
+                'file_type' => $doc->file_type,
+                'document_type' => $doc->document_type ?: 'Other',
+                'description' => $doc->description ?: '',
+                'uploaded_at' => $doc->uploaded_at,
+                'is_verified' => isset($doc->is_verified) ? $doc->is_verified : 0,
+                'file_url' => site_url('safelegalsolutions/safelegalsolutions_client/download_client_document/' . $doc->id)
+            ];
+        }
+        
+        $response['success'] = true;
+        $response['documents'] = $formatted_documents;
+        $response['student_id'] = $student_id; // For debugging
+        
+    } catch (Exception $e) {
+        $response['message'] = 'Error loading documents';
+        log_message('error', 'Client documents error: ' . $e->getMessage());
     }
     
-    $documents = $this->safelegalsolutions_client_model->get_student_documents($student->id);
-    
-    echo json_encode([
-        'success' => true,
-        'documents' => $documents
-    ]);
+    echo json_encode($response);
+    exit;
 }
 
 /**
- * Download my document - For clients
+ * Upload client document (AJAX)
  */
-public function download_my_document($id)
+public function upload_client_document($student_id = null)
 {
-    $student = $this->safelegalsolutions_client_model->get_student_by_client(get_client_user_id());
+    header('Content-Type: application/json');
     
-    if (!$student) {
-        access_denied('Documents');
+    $response = ['success' => false, 'message' => ''];
+    
+    
+    if (!$student_id) {
+        $response['message'] = 'Session expired. Please login again.';
+        echo json_encode($response);
+        exit;
     }
     
-    // Verify document belongs to this student
-    $doc = $this->safelegalsolutions_client_model->get_student_document($id, $student->id);
+    if (!isset($_FILES['document_file'])) {
+        $response['message'] = 'No file uploaded';
+        echo json_encode($response);
+        exit;
+    }
+    
+    $this->load->model('safelegalsolutions_client_model');
+    $result = $this->safelegalsolutions_client_model->upload_client_document($student_id, $_FILES['document_file'], $_POST);
+    
+    if ($result) {
+        $response['success'] = true;
+        $response['message'] = 'Document uploaded successfully';
+    } else {
+        $response['message'] = 'Upload failed. Check file type and size.';
+    }
+    
+    echo json_encode($response);
+    exit;
+}
+
+/**
+ * Download client document
+ */
+public function download_client_document($id)
+{
+    // Get student ID
+    $student_id = $this->session->userdata('student_id');
+    if (!$student_id) {
+        $student_id = $this->session->userdata('client_id');
+    }
+    if (!$student_id) {
+        $student_id = $this->session->userdata('sls_student_id');
+    }
+    if (!$student_id) {
+        $email = $this->session->userdata('client_logged_in');
+        if ($email) {
+            $this->load->model('safelegalsolutions_client_model');
+            $student = $this->safelegalsolutions_client_model->get_student_by_email($email);
+            if ($student) {
+                $student_id = $student->id;
+            }
+        }
+    }
+    
+    if (!$student_id) {
+        show_404();
+        return;
+    }
+    
+    $this->load->model('safelegalsolutions_client_model');
+    $doc = $this->safelegalsolutions_client_model->get_client_document($id, $student_id);
     
     if (!$doc) {
         show_404();
+        return;
     }
     
     header('Content-Type: ' . $doc->file_type);
@@ -2228,6 +2332,64 @@ public function download_my_document($id)
     header('Content-Length: ' . $doc->file_size);
     
     echo $doc->file_data;
+    exit;
+}
+
+/**
+ * Delete client document (AJAX)
+ */
+public function delete_client_document()
+{
+    header('Content-Type: application/json');
+    
+    $response = ['success' => false, 'message' => ''];
+    
+    // Get student ID
+    $student_id = $this->session->userdata('student_id');
+    if (!$student_id) {
+        $student_id = $this->session->userdata('client_id');
+    }
+    if (!$student_id) {
+        $student_id = $this->session->userdata('sls_student_id');
+    }
+    if (!$student_id) {
+        $email = $this->session->userdata('client_logged_in');
+        if ($email) {
+            $this->load->model('safelegalsolutions_client_model');
+            $student = $this->safelegalsolutions_client_model->get_student_by_email($email);
+            if ($student) {
+                $student_id = $student->id;
+            }
+        }
+    }
+    
+    $doc_id = $this->input->post('doc_id');
+    
+    if (!$student_id || !$doc_id) {
+        $response['message'] = 'Invalid request';
+        echo json_encode($response);
+        exit;
+    }
+    
+    $this->load->model('safelegalsolutions_client_model');
+    
+    // Verify document belongs to this student
+    $doc = $this->safelegalsolutions_client_model->get_client_document($doc_id, $student_id);
+    
+    if (!$doc) {
+        $response['message'] = 'Document not found';
+        echo json_encode($response);
+        exit;
+    }
+    
+    if ($this->safelegalsolutions_client_model->delete_student_document($doc_id)) {
+        $response['success'] = true;
+        $response['message'] = 'Document deleted successfully';
+    } else {
+        $response['message'] = 'Delete failed';
+    }
+    
+    echo json_encode($response);
     exit;
 }
 }

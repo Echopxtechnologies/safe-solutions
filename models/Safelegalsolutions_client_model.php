@@ -919,7 +919,6 @@ public function get_student_by_client_id($client_id)
     return $this->db->get($this->table_students)->row();
 }
 
-
 // client enrolment id 
 /**
  * Get enrollment by student ID
@@ -938,6 +937,69 @@ public function get_enrollment_by_student($student_id)
     
     return $this->db->get()->row();
 }
+/**
+ * Upload client document
+ */
+public function upload_client_document($student_id, $file, $post_data)
+{
+    // Validate file type
+    $allowed_types = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    
+    if (!in_array($ext, $allowed_types)) {
+        return false;
+    }
+    
+    // Validate file size (10MB max)
+    if ($file['size'] > 10485760) {
+        return false;
+    }
+    
+    $file_data = file_get_contents($file['tmp_name']);
+    $document_type = isset($post_data['document_type']) ? $post_data['document_type'] : 'Other';
+    
+    $data = [
+        'student_id' => $student_id,
+        'file_name' => $file['name'],
+        'file_data' => $file_data,
+        'file_size' => $file['size'],
+        'file_type' => $file['type'],
+        'document_type' => $document_type,
+        'description' => isset($post_data['description']) ? $post_data['description'] : null,
+        'uploaded_by' => $student_id, // Client upload
+        'uploaded_at' => date('Y-m-d H:i:s')
+    ];
+    
+    return $this->db->insert(db_prefix() . 'sls_student_documents', $data);
+}
 
+/**
+ * Get client's own document
+ */
+public function get_client_document($id, $student_id)
+{
+    $this->db->where('id', $id);
+    $this->db->where('student_id', $student_id);
+    return $this->db->get(db_prefix() . 'sls_student_documents')->row();
+}
 
+/**
+ * Get student documents
+ */
+public function get_student_documents($student_id)
+{
+    $this->db->select('*');
+    $this->db->from(db_prefix() . 'sls_student_documents');
+    $this->db->where('student_id', $student_id);
+    $this->db->order_by('uploaded_at', 'DESC');
+    return $this->db->get()->result();
+}
+
+/**
+ * Delete student document
+ */
+public function delete_student_document($id)
+{
+    return $this->db->delete(db_prefix() . 'sls_student_documents', ['id' => $id]);
+}
 }
