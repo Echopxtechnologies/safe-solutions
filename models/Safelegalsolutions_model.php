@@ -463,6 +463,7 @@ public function get_country($id)
  */
 public function add_student($data)
 {
+    
     // ============================================================
     // FILTER: Remove payment table fields (they go to sls_payments)
     // ============================================================

@@ -861,6 +861,7 @@ private function send_staff_credentials_email($email, $password, $firstname)
             !is_sls_manager_or_admin()) {
             access_denied('safelegalsolutions');
         }
+    
 
         $staff_id = get_staff_user_id();
 
@@ -1984,16 +1985,48 @@ public function verify_partner_document($id)
 /**
  * Upload student document
  */
+/**
+ * Upload student document
+ * Handles AJAX file upload and returns JSON response
+ */
 public function upload_student_document($student_id)
 {
+    // Set JSON header immediately
+    header('Content-Type: application/json');
+    
+    // Check permission
     if (!is_sls_manager_or_admin()) {
-        set_alert('danger', 'Access denied');
-        redirect(admin_url('safelegalsolutions/students'));
+        echo json_encode([
+            'success' => false,
+            'message' => 'Access denied'
+        ]);
         return;
     }
     
-    $this->safelegalsolutions_model->upload_student_document($student_id);
-    redirect(admin_url('safelegalsolutions/students/' . $student_id . '?group=documents'));
+    // Validate student_id
+    if (empty($student_id) || !is_numeric($student_id)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid student ID'
+        ]);
+        return;
+    }
+    
+    // Call model to upload document
+    $result = $this->safelegalsolutions_model->upload_student_document($student_id);
+    
+    // Return JSON response
+    if ($result) {
+        echo json_encode([
+            'success' => true,
+            'message' => 'Document uploaded successfully'
+        ]);
+    } else {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Failed to upload document. Please try again.'
+        ]);
+    }
 }
 
 /**

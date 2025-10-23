@@ -2290,51 +2290,28 @@ public function upload_client_document($student_id = null)
     exit;
 }
 
-/**
- * Download client document
- */
 public function download_client_document($id)
 {
-    // Get student ID
-    $student_id = $this->session->userdata('student_id');
-    if (!$student_id) {
-        $student_id = $this->session->userdata('client_id');
-    }
-    if (!$student_id) {
-        $student_id = $this->session->userdata('sls_student_id');
-    }
-    if (!$student_id) {
-        $email = $this->session->userdata('client_logged_in');
-        if ($email) {
-            $this->load->model('safelegalsolutions_client_model');
-            $student = $this->safelegalsolutions_client_model->get_student_by_email($email);
-            if ($student) {
-                $student_id = $student->id;
-            }
-        }
-    }
-    
-    if (!$student_id) {
-        show_404();
+    if (!$id || !is_numeric($id)) {
+        redirect(site_url('safelegalsolutions/safelegalsolutions_client/my_profile'));
         return;
     }
     
-    $this->load->model('safelegalsolutions_client_model');
-    $doc = $this->safelegalsolutions_client_model->get_client_document($id, $student_id);
+    $doc = $this->safelegalsolutions_client_model->get_student_document($id);
     
     if (!$doc) {
         show_404();
-        return;
     }
     
     header('Content-Type: ' . $doc->file_type);
     header('Content-Disposition: attachment; filename="' . $doc->file_name . '"');
     header('Content-Length: ' . $doc->file_size);
+    header('Cache-Control: private, max-age=0, must-revalidate');
+    header('Pragma: public');
     
     echo $doc->file_data;
     exit;
 }
-
 /**
  * Delete client document (AJAX)
  */

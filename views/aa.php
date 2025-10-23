@@ -90,14 +90,13 @@
                                         <i class="fa fa-handshake-o"></i> Referral
                                     </a>
                                 </li>
-                                
-                                <?php endif; ?>
                                 <li>
                                     <a href="#tab_documents" data-toggle="tab" aria-expanded="false">
-                                        <i class="fa fa-file-pdf-o"></i> Documents 
-                                        <span class="badge badge-secondary" id="documents_count">0</span>
+                                        <i class="fa fa-files-o"></i> Documents
+                                        <span class="badge badge-danger" id="documents_count">0</span>
                                     </a>
                                 </li>
+                                <?php endif; ?>
                             </ul>
                         </div>
 
@@ -293,7 +292,7 @@
                                             <input type="text" name="phone" id="phone" 
                                                    class="form-control" required
                                                    placeholder="+91 9876543210"
-                                               
+                                                   pattern="[0-9+\-\s()]+"
                                                    value="<?php echo isset($student) ? htmlspecialchars($student->phone) : ''; ?>">
                                             <small class="text-muted">10 digit mobile number</small>
                                         </div>
@@ -360,7 +359,7 @@
                                             <input type="text" name="emergency_contact_mobile" id="emergency_contact_mobile" 
                                                    class="form-control" required
                                                    placeholder="+91 9876543210"
-                                            
+                                                   pattern="[0-9+\-\s()]+"
                                                    value="<?php echo isset($student) ? htmlspecialchars($student->emergency_contact_mobile) : ''; ?>">
                                             <small class="text-muted">Emergency contact number (can be different from student's phone)</small>
                                         </div>
@@ -1425,78 +1424,7 @@
                     </div>
                 </div>
             </div>
-          
-<!-- ADD THIS COMPLETE DOCUMENTS TAB SECTION -->
-<!-- TAB 12: DOCUMENTS -->
-<div class="tab-pane" id="tab_documents">
-      <!-- Upload Button Section -->
-    <div class="row">
-        <div class="col-md-12">
-            <div class="well well-sm" style="background: #f9f9f9; border-left: 4px solid #84c529;">
-                <div class="row">
-                    <div class="col-md-8">
-                        <h4 class="no-margin">
-                            <i class="fa fa-file-pdf-o"></i> Document Management
-                        </h4>
-                        <p class="text-muted mbot0 mtop5">
-                            Upload and manage candidate documents (Passport, Visa, Certificates, etc.)
-                        </p>
-                    </div>
-                    <div class="col-md-4 text-right">
-                        <?php if (is_sls_manager_or_admin()): ?>
-                            <button type="button" 
-                                    class="btn btn-primary" 
-                                    id="btn-open-document-modal"
-                                    data-toggle="modal" 
-                                    data-target="#documentUploadModal">
-                                <i class="fa fa-plus"></i> Upload New Document
-                            </button>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-  
-    <!-- Documents List Section -->
-    <div class="row mtop20">
-        <div class="col-md-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    <h4 class="panel-title">
-                        <i class="fa fa-list"></i> Uploaded Documents
-                    </h4>
-                </div>
-                <div class="panel-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered">
-                            <thead>
-                                <tr>
-                                    <th width="5%">#</th>
-                                    <th width="20%">Document Type</th>
-                                    <th width="25%">File Name</th>
-                                    <th width="10%">Size</th>
-                                    <th width="15%">Uploaded By</th>
-                                    <th width="15%">Upload Date</th>
-                                    <th width="10%">Status</th>
-                                    <th width="15%">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="student-documents-list">
-                                <tr>
-                                    <td colspan="8" class="text-center">
-                                        <i class="fa fa-spinner fa-spin"></i> Loading documents...
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
             <!-- TAB 11: REFERRAL -->
             <div class="tab-pane" id="tab_referral">
                 <!-- Referral Information -->
@@ -1560,7 +1488,93 @@
                 </div>
                 <?php endif; ?>
             </div>
+            <?php echo form_close(); ?>
+<!-- TAB 12: DOCUMENTS -->
+<!-- TAB 12: DOCUMENTS -->
+<div class="tab-pane" id="tab_documents">
+    <!-- Upload New Document Section -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <i class="fa fa-upload"></i> Upload New Document
+                    </h4>
+                </div>
+                <div class="panel-body">
+                    <?php echo form_open_multipart(admin_url('safelegalsolutions/upload_student_document/' . $student->id), 
+                        ['id' => 'upload-document-form']); ?>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Document Type <span class="text-danger">*</span></label>
+                                <select name="document_type" class="form-control selectpicker" required>
+                                    <option value="">Select Type</option>
+                                    <option value="Passport">Passport</option>
+                                    <option value="Visa">Visa</option>
+                                    <option value="Academic Transcript">Academic Transcript</option>
+                                    <option value="Birth Certificate">Birth Certificate</option>
+                                    <option value="Bank Statement">Bank Statement</option>
+                                    <option value="Medical Certificate">Medical Certificate</option>
+                                    <option value="Police Clearance">Police Clearance</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Select File <span class="text-danger">*</span></label>
+                                <input type="file" name="document_file" class="form-control" required 
+                                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                                <small>Max size: 5MB. Formats: PDF, JPG, PNG, DOC, DOCX</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Remarks</label>
+                                <input type="text" name="remarks" class="form-control" 
+                                       placeholder="Optional remarks">
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa fa-upload"></i> Upload Document
+                    </button>
+                    <?php echo form_close(); ?>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- Documents List -->
+    <div class="row mtop20">
+        <div class="col-md-12">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Document Type</th>
+                            <th>File Name</th>
+                            <th>Size</th>
+                            <th>Uploaded By</th>
+                            <th>Upload Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-documents-list">
+                        <tr>
+                            <td colspan="8" class="text-center">
+                                <i class="fa fa-spinner fa-spin"></i> Loading documents...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
             <?php endif; ?>
                         </div>
                         <!-- END TAB CONTENT -->
@@ -1675,105 +1689,11 @@
                             <?php endif; ?>
                         </div>
 
-                        <?php echo form_close(); ?>
+
 
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
-
-
-<div class="modal fade" id="documentUploadModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title">
-                    <i class="fa fa-cloud-upload"></i> Upload Document
-                </h4>
-            </div>
-            
-            <form id="document-upload-form" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <!-- CSRF Token -->
-                    <input type="hidden" name="<?php echo $this->security->get_csrf_token_name(); ?>" 
-                           value="<?php echo $this->security->get_csrf_hash(); ?>">
-                    <input type="hidden" name="student_id" value="<?php echo isset($student) ? $student->id : ''; ?>">
-                    
-                    <!-- Document Type -->
-                    <div class="form-group">
-                        <label for="document_type" class="control-label">
-                            <span class="text-danger">*</span> Document Type
-                        </label>
-                        <select name="document_type" id="document_type" 
-                                class="form-control selectpicker" 
-                                data-live-search="true" required>
-                            <option value="">-- Select Type --</option>
-                            <option value="Academic Certificates">Academic Certificates</option>
-                            <option value="Passport">Passport</option>
-                            <option value="Birth Certificate">Birth Certificate</option>
-                            <option value="Aadhaar Card">Aadhaar Card</option>
-                            <option value="PAN Card">PAN Card</option>
-                            <option value="Visa Documents">Visa Documents</option>
-                            <option value="Work Experience">Work Experience</option>
-                            <option value="Language Test">Language Test (IELTS/TOEFL)</option>
-                            <option value="Financial Documents">Financial Documents</option>
-                            <option value="Medical Reports">Medical Reports</option>
-                            <option value="Police Clearance">Police Clearance</option>
-                            <option value="Offer Letter">Offer Letter</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    
-                    <!-- File Upload -->
-                    <div class="form-group">
-                        <label for="document_file" class="control-label">
-                            <span class="text-danger">*</span> Choose File
-                        </label>
-                        <input type="file" 
-                               name="document_file" 
-                               id="document_file" 
-                               class="form-control" 
-                               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                               onchange="validateFileInput(this)"
-                               required>
-                        <small class="text-muted">
-                            Allowed: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
-                        </small>
-                        <div class="file-selected-label" style="display:none; margin-top:5px; color:#28a745;">
-                            <i class="fa fa-check-circle"></i> <span></span>
-                        </div>
-                    </div>
-                    
-                    <!-- Notes -->
-                    <div class="form-group">
-                        <label for="description" class="control-label">Notes (Optional)</label>
-                        <textarea name="description" id="description" class="form-control" 
-                                  rows="2" placeholder="Add any description about this document..."></textarea>
-                    </div>
-                    
-                    <!-- Upload Progress -->
-                    <div id="upload-progress" style="display:none;">
-                        <div class="progress">
-                            <div class="progress-bar progress-bar-striped active" 
-                                 role="progressbar" style="width: 0%">
-                                <span class="sr-only">0% Complete</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">
-                        <i class="fa fa-times"></i> Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary" id="upload-btn">
-                        <i class="fa fa-upload"></i> Upload Document
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
@@ -1781,284 +1701,368 @@
 <?php init_tail(); ?>
 
 <!-- Keep all existing JavaScript exactly as is -->
+
+
 <script>
-$(function() {
-    // Initialize selectpicker
-    if ($.fn.selectpicker) {
-        $('.selectpicker').selectpicker('refresh');
-    }
-
-    // Update price display when package is selected
-    $('#item_id').on('change', function() {
-        updatePriceDisplay();
-    });
-
-    // Calculate profile completion on form input
-    $('#candidate-form input, #candidate-form textarea, #candidate-form select').on('input change', function() {
-        calculateCompletion();
-    });
-
-    // Show/hide legal issues details based on checkbox
-    $('#previous_legal_issues').on('change', function() {
-        if ($(this).is(':checked')) {
-            $('#legal_issues_details_row').slideDown();
-        } else {
-            $('#legal_issues_details_row').slideUp();
-            $('#legal_issues_details').val('');
-        }
-    });
+$(document).ready(function() {
+    <?php if (isset($student) && !empty($student->id)): ?>
     
     // ============================================
-// DOCUMENT UPLOAD FORM HANDLER
-// ============================================
-
-$('#document-upload-form').on('submit', function(e) {
-    e.preventDefault();
+    // DOCUMENT MANAGEMENT SECTION - FIXED VERSION
+    // ============================================
     
-    // Validate form
-    const documentType = $('#document_type').val();
-    const fileInput = $('#document_file')[0];
+    console.log('Student document system initializing for ID: <?php echo $student->id; ?>');
     
-    if (!documentType) {
-        alert_float('danger', 'Please select document type');
-        return false;
-    }
+    // Load documents when Documents tab is clicked
+    $('a[href="#tab_documents"]').on('shown.bs.tab', function(e) {
+        console.log('Documents tab activated - loading documents...');
+        loadStudentDocuments();
+    });
     
-    if (!fileInput.files || !fileInput.files[0]) {
-        alert_float('danger', 'Please select a file to upload');
-        return false;
-    }
+    // Check if documents tab is already active on page load
+    setTimeout(function() {
+        if ($('.tab-pane#tab_documents').hasClass('active')) {
+            console.log('Documents tab is active on page load');
+            loadStudentDocuments();
+        }
+    }, 500);
     
-    // Validate file again before upload
-    if (!validateFileInput(fileInput)) {
-        return false;
-    }
-    
-    // Prepare form data
-    const formData = new FormData(this);
-    
-    // Show progress
-    $('#upload-progress').show();
-    $('#upload-btn').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Uploading...');
-    
-    // Upload via AJAX
-    $.ajax({
-        url: admin_url + 'safelegalsolutions/upload_student_document/<?php echo $student->id; ?>',  // ✅ HAS student_id
-        type: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        dataType: 'json',
-        xhr: function() {
-            const xhr = new window.XMLHttpRequest();
-            // Upload progress
-            xhr.upload.addEventListener('progress', function(e) {
-                if (e.lengthComputable) {
-                    const percentComplete = Math.round((e.loaded / e.total) * 100);
-                    $('#upload-progress .progress-bar')
-                        .css('width', percentComplete + '%')
-                        .attr('aria-valuenow', percentComplete)
-                        .find('.sr-only').text(percentComplete + '% Complete');
+    // Document upload form submission handler
+    $(document).on('submit', '#upload-document-form', function(e) {
+        e.preventDefault();
+        
+        var form = $(this);
+        var submitBtn = form.find('button[type="submit"]');
+        var formData = new FormData(this);
+        
+        // Ensure student_id is included
+        formData.append('student_id', '<?php echo $student->id; ?>');
+        
+        // Show loading state
+        submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Uploading...');
+        
+        $.ajax({
+            url: admin_url + 'safelegalsolutions/upload_student_document',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                console.log('Upload response:', response);
+                
+                // Parse response if it's a string
+                var result;
+                try {
+                    result = typeof response === 'string' ? JSON.parse(response) : response;
+                } catch(e) {
+                    result = { success: false, message: 'Invalid server response' };
                 }
-            }, false);
-            return xhr;
-        },
-        success: function(response) {
-            console.log('Upload response:', response);
-            
-            if (response.success) {
-                alert_float('success', response.message || 'Document uploaded successfully');
                 
-                // Reset form
-                $('#document-upload-form')[0].reset();
-                $('#document_type').selectpicker('refresh');
-                
-                // Hide modal
-                $('#documentUploadModal').modal('hide');
-                
-                // Reload documents list
-                if (typeof loadStudentDocuments === 'function') {
+                if (result.success) {
+                    alert_float('success', result.message || 'Document uploaded successfully');
+                    $('#upload-document-modal').modal('hide');
+                    form[0].reset();
+                    $('.selectpicker').selectpicker('refresh');
                     loadStudentDocuments();
+                } else {
+                    alert_float('danger', result.message || 'Failed to upload document');
                 }
-            } else {
-                alert_float('danger', response.message || 'Failed to upload document');
-            }
-        },
-        error: function(xhr, status, error) {
-            console.error('Upload error:', xhr.responseText);
-            
-            let errorMessage = 'Upload failed. Please try again.';
-            
-            try {
-                const response = JSON.parse(xhr.responseText);
-                errorMessage = response.message || errorMessage;
-            } catch(e) {
-                if (xhr.status === 500) {
-                    errorMessage = 'Server error. Please check server logs.';
-                } else if (xhr.status === 413) {
-                    errorMessage = 'File too large. Maximum size is 10MB.';
+            },
+            error: function(xhr, status, error) {
+                console.error('Upload error:', {
+                    status: xhr.status,
+                    error: error,
+                    response: xhr.responseText
+                });
+                
+                var errorMsg = 'Failed to upload document. ';
+                if (xhr.status === 413) {
+                    errorMsg = 'File too large. Maximum size is 10MB';
+                } else if (xhr.status === 500) {
+                    errorMsg = 'Server error. Please try again';
+                } else if (xhr.status === 403) {
+                    errorMsg = 'Access denied';
                 }
+                
+                alert_float('danger', errorMsg);
+            },
+            complete: function() {
+                submitBtn.prop('disabled', false).html('<i class="fa fa-upload"></i> Upload Document');
             }
-            
-            alert_float('danger', errorMessage);
-        },
-        complete: function() {
-            // Hide progress and enable button
-            $('#upload-progress').hide();
-            $('#upload-progress .progress-bar').css('width', '0%');
-            $('#upload-btn').prop('disabled', false).html('<i class="fa fa-upload"></i> Upload Document');
-        }
+        });
+        
+        return false;
     });
-});
-
-// Reset modal when closed
-$('#documentUploadModal').on('hidden.bs.modal', function() {
-    $('#document-upload-form')[0].reset();
-    $('#document_type').selectpicker('refresh');
-    $('#upload-progress').hide();
-    $('.file-selected-label').hide();
-});
-    // Trigger on page load if editing
-    <?php if (isset($student)): ?>
-    if ($('#previous_legal_issues').is(':checked')) {
-        $('#legal_issues_details_row').show();
+    
+    // Main function to load student documents
+    function loadStudentDocuments() {
+        console.log('Loading documents for student ID: <?php echo $student->id; ?>');
+        
+        // Show loading indicator
+        $('#student-documents-list').html(
+            '<tr><td colspan="8" class="text-center">' +
+            '<i class="fa fa-spinner fa-spin"></i> Loading documents...</td></tr>'
+        );
+        
+        // Make AJAX request
+        $.ajax({
+            url: admin_url + 'safelegalsolutions/get_student_documents_ajax/<?php echo $student->id; ?>',
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                console.log('Documents response received:', response);
+                
+                var html = '';
+                
+                // Check if we have documents
+                if (response && response.success && response.documents && Array.isArray(response.documents) && response.documents.length > 0) {
+                    // Update document count badge
+                    $('#documents_count').text(response.documents.length).removeClass('badge-secondary').addClass('badge-danger');
+                    
+                    // Build table rows for each document
+                    $.each(response.documents, function(index, doc) {
+                        // Prepare status badge
+                        var statusBadge = '';
+                        if (doc.is_verified == 1 || doc.is_verified == '1') {
+                            statusBadge = '<span class="label label-success">Verified</span>';
+                        } else {
+                            statusBadge = '<span class="label label-warning">Pending</span>';
+                        }
+                        
+                        // Prepare uploader name
+                        var uploaderName = 'System';
+                        if (doc.uploaded_by_name && doc.uploaded_by_name.trim() !== '') {
+                            uploaderName = doc.uploaded_by_name;
+                        } else if (doc.uploaded_by_firstname || doc.uploaded_by_lastname) {
+                            uploaderName = ((doc.uploaded_by_firstname || '') + ' ' + (doc.uploaded_by_lastname || '')).trim();
+                        }
+                        
+                        // Build table row
+                        html += '<tr>';
+                        html += '<td>' + (index + 1) + '</td>';
+                        html += '<td>' + escapeHtml(doc.document_type || 'General') + '</td>';
+                        html += '<td>' + escapeHtml(doc.file_name || 'Unknown') + '</td>';
+                        html += '<td>' + formatFileSize(parseInt(doc.file_size) || 0) + '</td>';
+                        html += '<td>' + escapeHtml(uploaderName) + '</td>';
+                        html += '<td>' + formatDate(doc.uploaded_at) + '</td>';
+                        html += '<td>' + statusBadge + '</td>';
+                        html += '<td class="text-nowrap">';
+                        
+                        // Download button
+                        html += '<a href="' + admin_url + 'safelegalsolutions/download_student_document/' + doc.id + '" ';
+                        html += 'class="btn btn-xs btn-info" title="Download" target="_blank">';
+                        html += '<i class="fa fa-download"></i></a> ';
+                        
+                        <?php if (is_sls_manager_or_admin()): ?>
+                        // Verify button (only if not verified)
+                        if (doc.is_verified != 1 && doc.is_verified != '1') {
+                            html += '<button type="button" onclick="verifyStudentDoc(' + doc.id + ')" ';
+                            html += 'class="btn btn-xs btn-success" title="Verify">';
+                            html += '<i class="fa fa-check"></i></button> ';
+                        }
+                        
+                        // Delete button
+                        html += '<button type="button" onclick="deleteStudentDoc(' + doc.id + ')" ';
+                        html += 'class="btn btn-xs btn-danger" title="Delete">';
+                        html += '<i class="fa fa-trash"></i></button>';
+                        <?php endif; ?>
+                        
+                        html += '</td>';
+                        html += '</tr>';
+                    });
+                } else {
+                    // No documents found
+                    $('#documents_count').text('0').removeClass('badge-danger').addClass('badge-secondary');
+                    html = '<tr><td colspan="8" class="text-center text-muted">' +
+                           '<i class="fa fa-folder-open-o"></i> No documents uploaded yet</td></tr>';
+                }
+                
+                // Update the table
+                $('#student-documents-list').html(html);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading documents:', {
+                    status: xhr.status,
+                    statusText: xhr.statusText,
+                    error: error,
+                    responseText: xhr.responseText
+                });
+                
+                $('#documents_count').text('0').removeClass('badge-danger').addClass('badge-secondary');
+                
+                var errorMessage = 'Failed to load documents';
+                if (xhr.status === 404) {
+                    errorMessage = 'Documents endpoint not found';
+                } else if (xhr.status === 403) {
+                    errorMessage = 'Access denied - insufficient permissions';
+                } else if (xhr.status === 500) {
+                    errorMessage = 'Server error - please refresh the page';
+                }
+                
+                $('#student-documents-list').html(
+                    '<tr><td colspan="8" class="text-center text-danger">' +
+                    '<i class="fa fa-exclamation-triangle"></i> ' + errorMessage + '</td></tr>'
+                );
+            }
+        });
     }
+    
+    // Global function to verify a document
+    window.verifyStudentDoc = function(docId) {
+        if (!confirm('Are you sure you want to verify this document?')) {
+            return;
+        }
+        
+        $.ajax({
+            url: admin_url + 'safelegalsolutions/verify_student_document/' + docId,
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                console.log('Verify response:', response);
+                
+                var result;
+                try {
+                    result = typeof response === 'string' ? JSON.parse(response) : response;
+                } catch(e) {
+                    result = { success: true, message: 'Document verified' };
+                }
+                
+                if (result.success) {
+                    alert_float('success', result.message || 'Document verified successfully');
+                    loadStudentDocuments();
+                } else {
+                    alert_float('danger', result.message || 'Failed to verify document');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Verify error:', error);
+                alert_float('danger', 'Error verifying document. Please try again.');
+            }
+        });
+    };
+    
+    // Global function to delete a document
+    window.deleteStudentDoc = function(docId) {
+        if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+            return;
+        }
+        
+        $.ajax({
+            url: admin_url + 'safelegalsolutions/delete_student_document/' + docId,
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                console.log('Delete response:', response);
+                
+                var result;
+                try {
+                    result = typeof response === 'string' ? JSON.parse(response) : response;
+                } catch(e) {
+                    result = { success: true, message: 'Document deleted' };
+                }
+                
+                if (result.success) {
+                    alert_float('success', result.message || 'Document deleted successfully');
+                    loadStudentDocuments();
+                } else {
+                    alert_float('danger', result.message || 'Failed to delete document');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Delete error:', error);
+                alert_float('danger', 'Error deleting document. Please try again.');
+            }
+        });
+    };
+    
+    // Helper function to format file size
+    function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '0 Bytes';
+        
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Helper function to format date
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return dateString;
+            
+            // Format as: Dec 25, 2024 10:30 AM
+            const options = { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            
+            return date.toLocaleDateString('en-US', options);
+        } catch(e) {
+            return dateString;
+        }
+    }
+    
+    // Helper function to escape HTML
+    function escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe
+            .toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+    
+    <?php else: ?>
+    
+    // Student not yet created - documents functionality disabled
+    console.log('New student form - documents functionality will be available after saving');
+    
     <?php endif; ?>
     
-    // Auto-uppercase PAN number
-    $('#pan_number').on('input', function() {
-        this.value = this.value.toUpperCase();
+    // ============================================
+    // OTHER FORM FUNCTIONALITY
+    // ============================================
+    
+    // Initialize date pickers
+    $('.datepicker').datepicker({
+        format: 'yyyy-mm-dd',
+        autoclose: true,
+        todayHighlight: true,
+        todayBtn: true,
+        clearBtn: true
     });
-
-    // Calculate initial completion and price if editing
-    <?php if (isset($student)): ?>
-    calculateCompletion();
-    updatePriceDisplay();
-    <?php endif; ?>
-});
-
-// Update price display based on selected package
-function updatePriceDisplay() {
-    var selectedOption = $('#item_id option:selected');
     
-    if (selectedOption.val()) {
-        var basePrice = parseFloat(selectedOption.data('base-price')) || 0;
-        var gst = parseFloat(selectedOption.data('gst')) || 0;
-        var total = parseFloat(selectedOption.data('total')) || 0;
-        
-        $('#display-base-price').text('₹' + basePrice.toFixed(2));
-        $('#display-gst').text('₹' + gst.toFixed(2));
-        $('#display-total').text('₹' + total.toFixed(2));
-        
-        // Highlight the price box
-        $('#price-details').css('border-color', '#28a745');
-        setTimeout(function() {
-            $('#price-details').css('border-color', '#e0e0e0');
-        }, 1000);
-    } else {
-        $('#display-base-price').text('₹0.00');
-        $('#display-gst').text('₹0.00');
-        $('#display-total').text('₹0.00');
-    }
-}
-
-// Calculate profile completion percentage
-function calculateCompletion() {
-    var requiredFields = [
-        'student_name',
-        'email',
-        'phone',
-        'address',
-        'city',
-        'state',
-        'pin_code',
-        'date_of_birth',
-        'passport_number',
-        'passport_expiry_date',
-        'emergency_contact_mobile',
-        'destination_country_id',
-        'university_name',
-        'course_program',
-        'item_id'
-    ];
+    // Initialize select pickers
+    $('.selectpicker').selectpicker('refresh');
     
-    var filled = 0;
-    
-    requiredFields.forEach(function(field) {
-        var value = $('#' + field).val();
-        if (value && value.trim() !== '') {
-            filled++;
+    // Handle country selection change
+    $('#destination_country_id').on('change', function() {
+        var countryId = $(this).val();
+        if (countryId) {
+            console.log('Country selected:', countryId);
+            // Add your country-specific logic here
         }
     });
     
-    var percentage = Math.round((filled / requiredFields.length) * 100);
-    
-    // Update progress bar if it exists
-    if ($('.progress-bar').length > 0) {
-        $('.progress-bar')
-            .css('width', percentage + '%')
-            .text(percentage + '%');
-        
-        // Change color based on completion
-        $('.progress-bar').removeClass('progress-bar-danger progress-bar-warning progress-bar-success');
-        if (percentage < 50) {
-            $('.progress-bar').addClass('progress-bar-danger');
-        } else if (percentage < 100) {
-            $('.progress-bar').addClass('progress-bar-warning');
-        } else {
-            $('.progress-bar').addClass('progress-bar-success');
+    // Phone number formatting and validation
+    $('input[type="tel"], #phone, #alternative_phone, #emergency_contact_mobile').on('input', function() {
+        var value = $(this).val().replace(/[^\d]/g, '');
+        if (value.length > 10) {
+            value = value.substring(0, 10);
         }
-    }
-}
-
-// Copy referral code to clipboard
-function copyReferralCode() {
-    var copyText = event.target.closest('.input-group').querySelector('input');
-    copyText.select();
-    copyText.setSelectionRange(0, 99999);
+        $(this).val(value);
+    });
     
-    try {
-        document.execCommand('copy');
-        alert('Referral code copied to clipboard!');
-    } catch (err) {
-        alert('Failed to copy referral code');
-    }
-}
-
-// Copy unique ID to clipboard
-function copyUniqueId() {
-    var uniqueId = '<?php echo isset($student) ? $student->unique_id : ""; ?>';
-    
-    if (!uniqueId) {
-        alert('No unique ID available');
-        return;
-    }
-    
-    // Create temporary input
-    var tempInput = document.createElement('input');
-    tempInput.value = uniqueId;
-    document.body.appendChild(tempInput);
-    tempInput.select();
-    
-    try {
-        document.execCommand('copy');
-        alert('Unique ID copied: ' + uniqueId);
-    } catch (err) {
-        alert('Failed to copy unique ID');
-    }
-    
-    document.body.removeChild(tempInput);
-}
-
-// Auto-uppercase passport number
-$('#passport_number').on('input', function() {
-    this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-});
-
-// ============================================
-// FORM SUBMIT HANDLER - AJAX SUBMISSION
-// ============================================
-  // Form validation before submit
+    // Form validation before submit
     $('#candidate-form').on('submit', function(e) {
         var requiredFields = $(this).find('[required]');
         var hasError = false;
@@ -2080,284 +2084,27 @@ $('#passport_number').on('input', function() {
         
         return true;
     });
-// ============================================
-// DOCUMENT MANAGEMENT SECTION - FIXED VERSION
-// ============================================
-
-/**
- * Validate file input before upload
- * Global function - must be available before DOM loads
- */
-window.validateFileInput = function(input) {
-    if (!input.files || !input.files[0]) {
-        return false;
-    }
     
-    const file = input.files[0];
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-    const allowedExtensions = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
+    // Clear validation errors on input
+    $('[required]').on('input change', function() {
+        $(this).closest('.form-group').removeClass('has-error');
+    });
     
-    // Get file extension
-    const fileName = file.name.toLowerCase();
-    const fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
+    // Handle tab navigation warnings for unsaved changes
+    var formChanged = false;
+    $('#candidate-form :input').on('change', function() {
+        formChanged = true;
+    });
     
-    // Check file size
-    if (file.size > maxSize) {
-        alert_float('danger', 'File size must not exceed 10MB');
-        input.value = '';
-        return false;
-    }
+    window.addEventListener('beforeunload', function(e) {
+        if (formChanged) {
+            e.preventDefault();
+            e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        }
+    });
     
-    // Check file extension
-    if (!allowedExtensions.includes(fileExtension)) {
-        alert_float('danger', 'Invalid file type. Only PDF, DOC, DOCX, JPG, PNG allowed');
-        input.value = '';
-        return false;
-    }
-    
-    // Show selected file info
-    console.log('✓ File selected:', file.name, '(' + formatFileSize(file.size) + ')');
-    
-    // Update UI to show selected file (optional)
-    const fileLabel = input.closest('.form-group').querySelector('.file-selected-label');
-    if (fileLabel) {
-        fileLabel.textContent = file.name;
-        fileLabel.style.display = 'block';
-    }
-    
-    return true;
-};
-
-/**
- * Format file size helper
- */
-window.formatFileSize = function(bytes) {
-    if (!bytes || bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-<?php if (isset($student) && !empty($student->id)): ?>
-
-console.log('Student document system initializing for ID: <?php echo $student->id; ?>');
-
-// Load documents when Documents tab is clicked
-$('a[href="#tab_documents"]').on('shown.bs.tab', function(e) {
-    console.log('Documents tab activated - loading documents...');
-    loadStudentDocuments();
+    $('#candidate-form').on('submit', function() {
+        formChanged = false;
+    });
 });
-
-// Check if documents tab is already active on page load
-$(document).ready(function() {
-    setTimeout(function() {
-        if ($('.tab-pane#tab_documents').hasClass('active')) {
-            console.log('Documents tab is active on page load');
-            loadStudentDocuments();
-        }
-    }, 500);
-});
-
-
-// Main function to load student documents
-function loadStudentDocuments() {
-    console.log('Loading documents for student ID: <?php echo $student->id; ?>');
-    
-    $('#student-documents-list').html(
-        '<tr><td colspan="8" class="text-center">' +
-        '<i class="fa fa-spinner fa-spin"></i> Loading documents...</td></tr>'
-    );
-    
-    $.ajax({
-        url: admin_url + 'safelegalsolutions/get_student_documents_ajax/<?php echo $student->id; ?>',
-        type: 'GET',
-        dataType: 'json',
-        cache: false,
-        success: function(response) {
-            console.log('Documents loaded:', response);
-            
-            var html = '';
-            
-            if (response && response.success && response.documents && response.documents.length > 0) {
-                $('#documents_count').text(response.documents.length).removeClass('badge-secondary').addClass('badge-danger');
-                
-                $.each(response.documents, function(index, doc) {
-                    var statusBadge = doc.is_verified == 1 ? 
-                        '<span class="label label-success">Verified</span>' : 
-                        '<span class="label label-warning">Pending</span>';
-                    
-                    var uploaderName = doc.uploaded_by_name || 'System';
-                    
-                    var typeClass = 'label-default';
-                    switch(doc.document_type) {
-                        case 'Passport': typeClass = 'label-primary'; break;
-                        case 'Visa': typeClass = 'label-info'; break;
-                        case 'Academic Transcript': typeClass = 'label-success'; break;
-                        case 'Bank Statement': typeClass = 'label-warning'; break;
-                    }
-                    
-                    html += '<tr>';
-                    html += '<td>' + (index + 1) + '</td>';
-                    html += '<td><span class="label ' + typeClass + '">' + escapeHtml(doc.document_type || 'General') + '</span></td>';
-                    html += '<td><i class="fa fa-file-pdf-o"></i> ' + escapeHtml(doc.file_name) + '</td>';
-                    html += '<td>' + formatFileSize(doc.file_size) + '</td>';
-                    html += '<td>' + escapeHtml(uploaderName) + '</td>';
-                    html += '<td>' + formatDate(doc.uploaded_at) + '</td>';
-                    html += '<td>' + statusBadge + '</td>';
-                    html += '<td class="text-nowrap">';
-                    
-                    // Download button
-                    html += '<a href="' + admin_url + 'safelegalsolutions/download_student_document/' + doc.id + '" ';
-                    html += 'class="btn btn-xs btn-info" title="Download" target="_blank">';
-                    html += '<i class="fa fa-download"></i></a> ';
-                    
-                    <?php if (is_sls_manager_or_admin()): ?>
-                    // Verify button
-                    if (doc.is_verified != 1) {
-                        html += '<button type="button" onclick="verifyStudentDoc(' + doc.id + ')" ';
-                        html += 'class="btn btn-xs btn-success" title="Verify">';
-                        html += '<i class="fa fa-check"></i></button> ';
-                    }
-                    
-                    // Delete button
-                    html += '<button type="button" onclick="deleteStudentDoc(' + doc.id + ')" ';
-                    html += 'class="btn btn-xs btn-danger" title="Delete">';
-                    html += '<i class="fa fa-trash"></i></button>';
-                    <?php endif; ?>
-                    
-                    html += '</td>';
-                    html += '</tr>';
-                });
-            } else {
-                $('#documents_count').text('0').removeClass('badge-danger').addClass('badge-secondary');
-                html = '<tr><td colspan="8" class="text-center text-muted">' +
-                       '<i class="fa fa-folder-open-o fa-2x"></i><br>No documents uploaded yet</td></tr>';
-            }
-            
-            $('#student-documents-list').html(html);
-        },
-        error: function(xhr, status, error) {
-            console.error('Load documents error:', xhr.responseText);
-            
-            $('#documents_count').text('0').removeClass('badge-danger').addClass('badge-secondary');
-            
-            var errorMessage = 'Failed to load documents';
-            if (xhr.status === 404) {
-                errorMessage = 'Documents endpoint not found';
-            } else if (xhr.status === 403) {
-                errorMessage = 'Access denied';
-            }
-            
-            $('#student-documents-list').html(
-                '<tr><td colspan="8" class="text-center text-danger">' +
-                '<i class="fa fa-exclamation-triangle"></i> ' + errorMessage + '</td></tr>'
-            );
-        }
-    });
-}
-
-// Verify document function
-window.verifyStudentDoc = function(docId) {
-    if (!confirm('Are you sure you want to verify this document?')) {
-        return;
-    }
-    
-    $.ajax({
-        url: admin_url + 'safelegalsolutions/verify_student_document/' + docId,
-        type: 'POST',
-        dataType: 'json',
-        data: {
-            '<?php echo $this->security->get_csrf_token_name(); ?>': '<?php echo $this->security->get_csrf_hash(); ?>'
-        },
-        success: function(response) {
-            if (response.success) {
-                alert_float('success', 'Document verified successfully');
-                loadStudentDocuments();
-            } else {
-                alert_float('danger', response.message || 'Failed to verify document');
-            }
-        },
-        error: function(xhr) {
-            alert_float('danger', 'Error verifying document');
-        }
-    });
-};
-
-// Delete document function
-window.deleteStudentDoc = function(docId) {
-    if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
-        return;
-    }
-    
-    $.ajax({
-        url: admin_url + 'safelegalsolutions/delete_student_document/' + docId,
-        type: 'POST',
-        dataType: 'json',
-        data: {
-            '<?php echo $this->security->get_csrf_token_name(); ?>': '<?php echo $this->security->get_csrf_hash(); ?>'
-        },
-        success: function(response) {
-            if (response.success) {
-                alert_float('success', 'Document deleted successfully');
-                loadStudentDocuments();
-            } else {
-                alert_float('danger', response.message || 'Failed to delete document');
-            }
-        },
-        error: function(xhr) {
-            alert_float('danger', 'Error deleting document');
-        }
-    });
-};
-
-// Helper: Format file size
-function formatFileSize(bytes) {
-    if (!bytes || bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-// Helper: Format date
-function formatDate(dateString) {
-    if (!dateString) return 'N/A';
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return dateString;
-        return date.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    } catch(e) {
-        return dateString;
-    }
-}
-
-// Helper: Escape HTML
-function escapeHtml(unsafe) {
-    if (!unsafe) return '';
-    return unsafe.toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-<?php else: ?>
-
-// New student - hide documents tab
-console.log('New student form - documents functionality will be available after saving');
-$('a[href="#tab_documents"]').parent().hide();
-
-<?php endif; ?>
-
-// ============================================
-// END DOCUMENT MANAGEMENT SECTION
-// ============================================
 </script>
