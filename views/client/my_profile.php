@@ -348,15 +348,15 @@
                     </div>
                 </div>
                 
-                <div class="row">
-                    <div class="col-md-6">
+                <div class="row"> 
+                    <!-- <div class="col-md-6">
                         <div class="form-group">
                             <label>National ID Number</label>
                             <input type="text" name="national_id_number" class="form-control" 
                                    value="<?php echo set_value('national_id_number', $student->national_id_number); ?>"
                                    <?php echo ($student->is_locked == 1) ? 'readonly' : ''; ?>>
                         </div>
-                    </div>
+                    </div> -->
                     
                     <div class="col-md-6">
                         <div class="form-group">
@@ -567,7 +567,7 @@
                 <div class="row">
                     <div class="col-md-12">
                         <div class="form-group">
-                            <label>Previous Institution Name</label>
+                            <label> Institution  Name</label>
                             <input type="text" name="institution_name" class="form-control" 
                                    value="<?php echo set_value('institution_name', $student->institution_name); ?>"
                                    <?php echo ($student->is_locked == 1) ? 'readonly' : ''; ?>>
@@ -622,7 +622,7 @@
                     
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label>Preferred University</label>
+                            <label>University/Institution Name</label>
                             <input type="text" name="university_name" class="form-control" 
                                    value="<?php echo set_value('university_name', $student->university_name); ?>"
                                    <?php echo ($student->is_locked == 1) ? 'readonly' : ''; ?>>
@@ -641,6 +641,34 @@
                         </div>
                     </div>
                 </div>
+
+
+
+
+
+
+
+                <h5 class="bold mtop30"><i class="fa fa-plane"></i> Study Abroad Program</h5>
+                                <hr/>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="city_destination">Destination City</label>
+                                            <input type="text" name="city_destination" id="city_destination" class="form-control"
+                                                   placeholder="City where you'll study"
+                                                   value="<?php echo htmlspecialchars($student->city_destination); ?>">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="state_destination">Destination State/Province</label>
+                                            <input type="text" name="state_destination" id="state_destination" class="form-control"
+                                                   placeholder="State/Province"
+                                                   value="<?php echo htmlspecialchars($student->state_destination); ?>">
+                                        </div>
+                                    </div>
+                                </div>
                 
                 <div class="row">
                     <div class="col-md-6">
@@ -918,24 +946,24 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label>Total Course Fees</label>
-                            <input type="text" name="total_fees" class="form-control" 
-                                   value="<?php echo set_value('total_fees', $student->total_fees); ?>"
-                                   readonly style="background: #f5f5f5;">
+                            <input type="text" name="total_course_fee" class="form-control" 
+                                   value="<?php echo set_value('total_fees', $student->total_course_fee); ?>"
+                                    style="background: #f5f5f5;">
                         </div>
                     </div>
                     
                     <div class="col-md-6">
                         <div class="form-group">
                             <label>Paid Amount</label>
-                            <input type="text" name="paid_amount" class="form-control" 
-                                   value="<?php echo set_value('paid_amount', $student->paid_amount); ?>"
-                                   readonly style="background: #f5f5f5;">
+                            <input type="text" name="amount_paid" class="form-control" 
+                                   value="<?php echo set_value('paid_amount', $student->amount_paid); ?>"
+                                     readonlystyle="background: #f5f5f5;">
                         </div>
                     </div>
                 </div>
                 
                 <div class="row">
-                    <div class="col-md-6">
+                    <!-- <div class="col-md-6">
                         <div class="form-group">
                             <label>Pending Amount</label>
                             <input type="text" name="pending_amount" class="form-control" 
@@ -951,6 +979,18 @@
                                    value="<?php echo set_value('next_payment_date', $student->next_payment_date); ?>"
                                    readonly style="background: #f5f5f5;">
                         </div>
+                    </div> -->
+
+
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="funding_source">Funding Source</label>
+                            <input type="text" name="funding_source" id="funding_source" class="form-control"
+                                   placeholder="E.g., Self-funded, Parents, Scholarship, Loan"
+                                   value="<?php echo htmlspecialchars($student->funding_source); ?>">
+                            <small class="text-muted">Separate multiple sources with commas</small>
+                        </div>
                     </div>
                 </div>
                 
@@ -958,7 +998,7 @@
                 <h5 class="bold subsection-title">Loan Information</h5>
                 
                 <div class="row">
-                    <div class="col-md-6">
+                    <!-- <div class="col-md-6">
                         <div class="form-group">
                             <label>Loan Applied?</label>
                             <select name="loan_applied" class="form-control selectpicker" 
@@ -968,7 +1008,17 @@
                                 <option value="No" <?php echo ($student->loan_applied == 'No') ? 'selected' : ''; ?>>No</option>
                             </select>
                         </div>
+                    </div> -->
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="loan_account_number">Loan Account Number</label>
+                            <input type="text" name="loan_account_number" id="loan_account_number" class="form-control"
+                                   placeholder="Account number"
+                                   value="<?php echo htmlspecialchars($student->loan_account_number); ?>">
+                        </div>
                     </div>
+
                     
                     <div class="col-md-6">
                         <div class="form-group">

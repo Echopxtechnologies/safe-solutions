@@ -725,7 +725,7 @@ private function send_staff_credentials_email($email, $password, $firstname)
     $company_name = get_option('companyname');
     $admin_url = admin_url();
     
-    $subject = 'Welcome to Safe Legal - Your Partner Account Credentials';
+    $subject = 'Welcome to Safe Legal - Your Safe Legal Partner Portal Credentials';
     
     $message = '
     <!DOCTYPE html>
@@ -735,10 +735,10 @@ private function send_staff_credentials_email($email, $password, $firstname)
         <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+            .header { background-color: #801425; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
             .content { background-color: #f9f9f9; padding: 30px; border: 1px solid #ddd; border-radius: 0 0 5px 5px; }
-            .credentials { background-color: #fff; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0; }
-            .button { display: inline-block; padding: 12px 30px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .credentials { background-color: #fff; padding: 20px; border-left: 4px solid #801425; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 30px; background-color: #801425; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
             .warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
         </style>
     </head>
@@ -749,23 +749,32 @@ private function send_staff_credentials_email($email, $password, $firstname)
             </div>
             
             <div class="content">
-                <h2>Hello ' . htmlspecialchars($firstname) . ',</h2>
+                <h2>Dear ' . htmlspecialchars($firstname) . ',</h2>
                 
-                <p>Your partner account has been created as an <strong>SLS Nodal Partner Manager</strong>.</p>
+                <p>On behalf of the entire team at Safe Legal We Would like to extend a warm welcome! We are thrilled to officially have you onboard as a partner.</p>
                 
                 <div class="credentials">
-                    <h3>Your Login Credentials:</h3>
-                    <p><strong>Admin URL:</strong> <a href="' . $admin_url . '">' . $admin_url . '</a></p>
-                    <p><strong>Email:</strong> ' . htmlspecialchars($email) . '</p>
+                    <h3>Please find the login credentials:</h3>
+                    <p><strong>Portal URL:</strong> <a href="' . $admin_url . '">' . $admin_url . '</a></p>
+                    <p><strong>Username:</strong> ' . htmlspecialchars($email) . '</p>
                     <p><strong>Password:</strong> <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 3px; font-family: monospace;">' . htmlspecialchars($password) . '</code></p>
                 </div>
                 
                 <div class="warning">
                     <strong>⚠️ Security:</strong> Please change your password after your first login.
                 </div>
+                <div>
+                <p> If you have any questions or need assistance, please don&#39;t hesitate to reach out: </p>
+<p>Email: partnersupport@safelegal.org  </p>
+<p>Phone: 9886181839/9731977228/6361619901 </p>
+<p>We look forward to a successful partnership! </p>
+<p>Best regards, </p>
+<p>The Safe Legal Team </p>
+
+                </div>
                 
                 <center>
-                    <a href="' . $admin_url . '" class="button">Login to Admin Panel</a>
+                    <a href="' . $admin_url . '" class="button" style="color:white;" >Login to your portal</a>
                 </center>
             </div>
         </div>
